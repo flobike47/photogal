@@ -1,23 +1,23 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface AuthState {
-  token: string | null;
   email: string | null;
   isAuthenticated: boolean;
-  setAuth: (token: string, email: string) => void;
+  isAdmin: boolean;
+  setAuth: (email: string, isAdmin: boolean) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
       email: null,
       isAuthenticated: false,
-      setAuth: (token, email) => set({ token, email, isAuthenticated: true }),
-      logout: () => set({ token: null, email: null, isAuthenticated: false }),
+      isAdmin: false,
+      setAuth: (email, isAdmin) => set({ email, isAuthenticated: true, isAdmin }),
+      logout: () => set({ email: null, isAuthenticated: false, isAdmin: false }),
     }),
-    { name: 'photogal-auth' },
+    { name: 'photogal-auth', storage: createJSONStorage(() => sessionStorage) },
   ),
 );

@@ -2,6 +2,7 @@ import './types.js';
 import Fastify from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
+import fastifyCookie from '@fastify/cookie';
 import fastifyJwt from '@fastify/jwt';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
@@ -24,14 +25,26 @@ const app = Fastify({
   },
 });
 
-await app.register(fastifyHelmet, { contentSecurityPolicy: false });
+await app.register(fastifyHelmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      scriptSrc: ["'none'"],
+      objectSrc: ["'none'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+});
 await app.register(fastifyCors, { origin: config.corsOrigin, credentials: true });
-await app.register(fastifyJwt, { secret: config.jwtSecret });
+await app.register(fastifyCookie);
+await app.register(fastifyJwt, {
+  secret: config.jwtSecret,
+  cookie: { cookieName: 'pg_session', signed: false },
+});
 await app.register(fastifyMultipart, { limits: { fileSize: 100 * 1024 * 1024 } });
 await app.register(fastifyStatic, {
   root: config.uploadsDir,
   prefix: '/uploads/',
-  decorateReply: false,
 });
 
 await app.register(authRoutes, { prefix: '/api/auth' });

@@ -1,0 +1,190 @@
+/* ─── Fonts & resets ─── */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --pg-heading-font: 'Cormorant Garamond', Georgia, serif;
+}
+.pg-heading {
+  font-family: var(--pg-heading-font);
+}
+
+/* ─── Album card (homepage grid) ─── */
+.pg-album-card {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+  background: #111;
+}
+.pg-album-card img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  transition: transform 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.85s ease;
+  filter: brightness(0.88);
+}
+.pg-album-card:hover img {
+  transform: scale(1.07);
+  filter: brightness(0.65);
+}
+.pg-album-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 80px 28px 26px;
+  background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 55%, transparent 100%);
+}
+
+.pg-album-extras {
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.pg-album-card:hover .pg-album-extras {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Photo card (share page) ─── */
+.pg-photo-card {
+  position: relative;
+  overflow: hidden;
+  background: #0d0d0d;
+  cursor: pointer;
+}
+.pg-photo-card .ant-image { display: block; }
+.pg-photo-card .ant-image img {
+  display: block; width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform 0.55s ease;
+}
+.pg-photo-card:hover .ant-image img {
+  transform: scale(1.04);
+}
+
+/* Custom Ant Design image mask */
+.pg-photo-card .ant-image-mask {
+  background: rgba(0,0,0,0) !important;
+  transition: background 0.3s ease !important;
+}
+.pg-photo-card:hover .ant-image-mask {
+  background: rgba(0,0,0,0.52) !important;
+}
+.pg-photo-card .ant-image-mask-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ─── Animations ─── */
+@keyframes pg-fade-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pg-fade-up   { opacity: 0; animation: pg-fade-up 0.9s ease forwards; }
+.pg-fade-up-1 { opacity: 0; animation: pg-fade-up 0.9s ease 0.12s forwards; }
+.pg-fade-up-2 { opacity: 0; animation: pg-fade-up 0.9s ease 0.24s forwards; }
+.pg-fade-up-3 { opacity: 0; animation: pg-fade-up 0.9s ease 0.38s forwards; }
+.pg-fade-up-4 { opacity: 0; animation: pg-fade-up 0.9s ease 0.52s forwards; }
+
+@keyframes pg-line-grow {
+  from { height: 0; opacity: 0; }
+  to   { height: 80px; opacity: 1; }
+}
+.pg-line-anim { animation: pg-line-grow 0.9s ease forwards; }
+
+/* ─── Scroll indicator bounce ─── */
+@keyframes pg-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(6px); }
+}
+.pg-bounce { animation: pg-bounce 2s ease infinite; }
+
+/* ─── Nav link hover ─── */
+.pg-nav-link {
+  color: rgba(255,255,255,0.65);
+  text-decoration: none;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+  position: relative;
+  padding-bottom: 3px;
+  transition: color 0.25s;
+}
+.pg-nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 0; height: 1px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+.pg-nav-link:hover, .pg-nav-link.active { color: #fff; }
+.pg-nav-link:hover::after, .pg-nav-link.active::after { width: 100%; }
+
+/* ─── Ghost button (dark bg) ─── */
+.pg-btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.38);
+  color: #fff;
+  padding: 14px 44px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-block;
+  text-decoration: none;
+}
+.pg-btn-ghost:hover {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
+/* ─── Dark button (light bg) ─── */
+.pg-btn-dark {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.28);
+  color: #111;
+  padding: 14px 44px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-block;
+  text-decoration: none;
+}
+.pg-btn-dark:hover {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+/* ─── Contact form inputs ─── */
+.pg-input, .pg-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(0,0,0,0.15);
+  padding: 12px 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 300;
+  color: #111;
+  outline: none;
+  transition: border-color 0.25s;
+  resize: none;
+}
+.pg-input:focus, .pg-textarea:focus {
+  border-bottom-color: #111;
+}
+.pg-input::placeholder, .pg-textarea::placeholder {
+  color: rgba(0,0,0,0.3);
+}

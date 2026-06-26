@@ -1,12 +1,9 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-export const apiClient = axios.create({ baseURL: '/api' });
-
-apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
+export const apiClient = axios.create({
+  baseURL: '/api',
+  withCredentials: true, // send the HttpOnly session cookie with every request
 });
 
 apiClient.interceptors.response.use(

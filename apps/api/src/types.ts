@@ -8,6 +8,7 @@ export interface Album {
   created_at: string;
   updated_at: string;
   photo_count?: number;
+  allowed_emails?: string[];
 }
 
 export interface Photo {
@@ -25,6 +26,7 @@ export interface AdminUser {
   id: string;
   email: string;
   password_hash: string;
+  session_version: number;
   created_at: string;
 }
 
@@ -39,7 +41,7 @@ export interface ContactMessage {
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: { id: string; email: string };
-    user: { id: string; email: string };
+    payload: { id?: string; email: string; v?: number; role: 'admin' | 'user' };
+    user: { id?: string; email: string; v?: number; role: 'admin' | 'user' };
   }
 }

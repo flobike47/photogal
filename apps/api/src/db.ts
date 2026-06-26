@@ -41,10 +41,11 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS admin_users (
-    id            TEXT PRIMARY KEY,
-    email         TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    created_at    TEXT NOT NULL
+    id              TEXT PRIMARY KEY,
+    email           TEXT UNIQUE NOT NULL,
+    password_hash   TEXT NOT NULL,
+    session_version INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS contact_messages (
@@ -54,6 +55,12 @@ db.exec(`
     message    TEXT NOT NULL,
     read       INTEGER DEFAULT 0,
     created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS album_access (
+    album_id TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    email    TEXT NOT NULL,
+    PRIMARY KEY (album_id, email)
   );
 `);
 
@@ -66,7 +73,20 @@ const defaultConfig: Record<string, string> = {
   hero_subtitle: 'Découvrez nos galeries photos et téléchargez vos favoris',
   footer_text: '© 2024 PhotoGal. Tous droits réservés.',
   logo_url: '',
+  hero_image_url: '',
+  about_title: 'À propos',
+  about_text: '',
+  about_image_url: '',
+  social_instagram: '',
+  social_facebook: '',
+  social_pinterest: '',
+  social_website: '',
+  heading_font: 'cormorant',
+  site_theme: 'dark',
 };
+
+// Migrate existing DBs: add session_version if the column doesn't exist yet
+try { db.exec('ALTER TABLE admin_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
 
 const insertConfig = db.prepare('INSERT OR IGNORE INTO site_config (key, value) VALUES (?, ?)');
 for (const [key, value] of Object.entries(defaultConfig)) {

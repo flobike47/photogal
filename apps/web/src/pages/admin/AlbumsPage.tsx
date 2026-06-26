@@ -7,6 +7,7 @@ import {
   Form,
   Input,
   Switch,
+  Select,
   Typography,
   Popconfirm,
   message,
@@ -37,6 +38,7 @@ interface AlbumForm {
   name: string;
   description?: string;
   is_public: boolean;
+  allowed_emails: string[];
 }
 
 export function AlbumsPage() {
@@ -95,16 +97,19 @@ export function AlbumsPage() {
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ is_public: true });
+    form.setFieldsValue({ is_public: true, allowed_emails: [] });
     setModalOpen(true);
   };
 
-  const openEdit = (album: Album) => {
+  const openEdit = async (album: Album) => {
     setEditing(album);
+    // Fetch album details to get allowed_emails
+    const { data } = await apiClient.get<Album>(`/albums/${album.id}`);
     form.setFieldsValue({
-      name: album.name,
-      description: album.description,
-      is_public: album.is_public === 1,
+      name: data.name,
+      description: data.description,
+      is_public: data.is_public === 1,
+      allowed_emails: data.allowed_emails ?? [],
     });
     setModalOpen(true);
   };
@@ -237,6 +242,19 @@ export function AlbumsPage() {
           </Form.Item>
           <Form.Item name="is_public" label="Visible publiquement" valuePropName="checked">
             <Switch checkedChildren="Public" unCheckedChildren="Privé" />
+          </Form.Item>
+          <Form.Item
+            name="allowed_emails"
+            label="Accès par email"
+            extra="Les utilisateurs connectés avec ces emails verront cet album dans 'Mes albums'"
+          >
+            <Select
+              mode="tags"
+              placeholder="ajouter@email.com"
+              tokenSeparators={[',', ' ']}
+              open={false}
+              suffixIcon={null}
+            />
           </Form.Item>
           <Space>
             <Button type="primary" htmlType="submit" loading={createMutation.isPending || updateMutation.isPending}>

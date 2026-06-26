@@ -15,12 +15,20 @@ const queryClient = new QueryClient({
 function ThemedApp() {
   const { config, setConfig } = useSiteConfigStore();
 
+  const fontStacks: Record<string, string> = {
+    cormorant: "'Cormorant Garamond', Georgia, serif",
+    playfair: "'Playfair Display', Georgia, serif",
+    montserrat: "'Montserrat', sans-serif",
+  };
+
   useEffect(() => {
     apiClient.get<SiteConfig>('/config').then((res) => {
       setConfig(res.data);
       document.title = res.data.site_name || 'PhotoGal';
+      const font = fontStacks[res.data.heading_font] ?? fontStacks.cormorant;
+      document.documentElement.style.setProperty('--pg-heading-font', font);
     });
-  }, [setConfig]);
+  }, [setConfig]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ConfigProvider

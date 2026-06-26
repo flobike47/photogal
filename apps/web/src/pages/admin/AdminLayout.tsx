@@ -27,7 +27,8 @@ export function AdminLayout() {
     refetchInterval: 60_000,
   });
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await apiClient.post('/auth/logout').catch(() => {});
     logout();
     navigate('/admin/login');
   };

@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  // Read env vars from the monorepo root so web and api share the same .env
+  envDir: resolve(__dirname, '../..'),
   server: {
     port: 5173,
     proxy: {
