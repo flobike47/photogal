@@ -1,7 +1,6 @@
 import Database from 'better-sqlite3';
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { config } from '../config.js';
 import { ensureBucket, upload, exists } from '../storage.js';
 
 const uploadsDir = join(import.meta.dirname, '../../uploads');
