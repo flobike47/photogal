@@ -1,4 +1,4 @@
-import { Layout, Menu, Typography, Button, Badge, Space, Avatar } from 'antd';
+import { Layout, Menu, Typography, Button, Badge, Space, Avatar, Progress, Tooltip } from 'antd';
 import {
   PictureOutlined,
   SettingOutlined,
@@ -24,6 +24,12 @@ export function AdminLayout() {
   const { data: unreadData } = useQuery({
     queryKey: ['unread-count'],
     queryFn: () => apiClient.get<{ count: number }>('/contact/unread-count').then((r) => r.data),
+    refetchInterval: 60_000,
+  });
+
+  const { data: storageStats } = useQuery({
+    queryKey: ['storage-stats'],
+    queryFn: () => apiClient.get<{ used_bytes: number; limit_gb: number | null }>('/config/storage').then(r => r.data),
     refetchInterval: 60_000,
   });
 
@@ -76,6 +82,35 @@ export function AdminLayout() {
           </Typography.Text>
         </div>
         <Menu theme="dark" mode="inline" selectedKeys={[selectedKey]} items={menuItems} />
+
+        {storageStats && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 'auto' }}>
+            {(() => {
+              const usedGb = storageStats.used_bytes / (1024 ** 3);
+              const limitGb = storageStats.limit_gb;
+              const percent = limitGb ? Math.min(Math.round((usedGb / limitGb) * 100), 100) : null;
+              const color = percent != null ? (percent >= 90 ? '#ff4d4f' : percent >= 70 ? '#faad14' : '#52c41a') : '#52c41a';
+              const label = usedGb < 1
+                ? `${(storageStats.used_bytes / (1024 ** 2)).toFixed(0)} Mo`
+                : `${usedGb.toFixed(2)} Go`;
+
+              return (
+                <Tooltip title={limitGb ? `${label} / ${limitGb} Go utilisés` : `${label} utilisés`} placement="right">
+                  <div>
+                    <Typography.Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block', marginBottom: 4 }}>
+                      Stockage · {label}{limitGb ? ` / ${limitGb} Go` : ''}
+                    </Typography.Text>
+                    {percent != null ? (
+                      <Progress percent={percent} size="small" strokeColor={color} showInfo={false} />
+                    ) : (
+                      <Progress percent={100} size="small" strokeColor="#177ddc" showInfo={false} success={{ percent: 0 }} />
+                    )}
+                  </div>
+                </Tooltip>
+              );
+            })()}
+          </div>
+        )}
       </Sider>
 
       <Layout>

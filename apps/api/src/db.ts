@@ -1,13 +1,11 @@
 import Database from 'better-sqlite3';
-import { join } from 'path';
 import { mkdirSync } from 'fs';
+import { dirname } from 'path';
 import { config } from './config.js';
 
-mkdirSync(config.uploadsDir, { recursive: true });
-mkdirSync(join(config.uploadsDir, 'photos'), { recursive: true });
-mkdirSync(join(config.uploadsDir, 'logos'), { recursive: true });
+mkdirSync(dirname(config.dbPath), { recursive: true });
 
-export const db = new Database(join(config.uploadsDir, 'photogal.db'));
+export const db = new Database(config.dbPath);
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -85,7 +83,6 @@ const defaultConfig: Record<string, string> = {
   site_theme: 'dark',
 };
 
-// Migrate existing DBs: add session_version if the column doesn't exist yet
 try { db.exec('ALTER TABLE admin_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
 
 const insertConfig = db.prepare('INSERT OR IGNORE INTO site_config (key, value) VALUES (?, ?)');

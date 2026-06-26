@@ -1,18 +1,26 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY tsconfig.json ./
-COPY src ./src
-RUN npm run build
 
-FROM node:20-alpine AS runner
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+RUN npm ci
+
+COPY apps/api/ apps/api/
+RUN npm run build --workspace @photogal/api
+
+FROM node:22-alpine
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
-COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev
-COPY --from=builder /app/dist ./dist
-ENV NODE_ENV=production
+
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+RUN npm ci --workspace @photogal/api --omit=dev
+
+COPY --from=builder /app/apps/api/dist apps/api/dist
+
+RUN mkdir -p /app/data
 EXPOSE 3001
-CMD ["node", "dist/index.js"]
+CMD ["node", "apps/api/dist/index.js"]

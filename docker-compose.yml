@@ -1,19 +1,58 @@
 services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"  # MinIO console (admin UI)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
-      context: ./apps/api
-      dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
+      context: .
+      dockerfile: apps/api/Dockerfile
     environment:
-      - NODE_ENV=development
-      - JWT_SECRET=${JWT_SECRET:-dev-secret}
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@photogal.com}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme123}
-      - UPLOADS_DIR=/app/uploads
+      NODE_ENV: production
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-photogal}
+      DB_PATH: /app/data/photogal.db
+      STORAGE_LIMIT_GB: ${STORAGE_LIMIT_GB:-10}
     volumes:
-      - uploads-data:/app/uploads
+      - db_data:/app/data
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+    ports:
+      - "80:80"
+    depends_on:
+      - api
     restart: unless-stopped
 
 volumes:
-  uploads-data:
+  minio_data:
+  db_data:

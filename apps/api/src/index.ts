@@ -5,9 +5,9 @@ import fastifyHelmet from '@fastify/helmet';
 import fastifyCookie from '@fastify/cookie';
 import fastifyJwt from '@fastify/jwt';
 import fastifyMultipart from '@fastify/multipart';
-import fastifyStatic from '@fastify/static';
 import { config } from './config.js';
 import { db } from './db.js';
+import { ensureBucket } from './storage.js';
 import { authRoutes } from './routes/auth.js';
 import { albumRoutes } from './routes/albums.js';
 import { photoRoutes } from './routes/photos.js';
@@ -42,10 +42,6 @@ await app.register(fastifyJwt, {
   cookie: { cookieName: 'pg_session', signed: false },
 });
 await app.register(fastifyMultipart, { limits: { fileSize: 100 * 1024 * 1024 } });
-await app.register(fastifyStatic, {
-  root: config.uploadsDir,
-  prefix: '/uploads/',
-});
 
 await app.register(authRoutes, { prefix: '/api/auth' });
 await app.register(albumRoutes, { prefix: '/api/albums' });
@@ -54,6 +50,9 @@ await app.register(siteConfigRoutes, { prefix: '/api/config' });
 await app.register(contactRoutes, { prefix: '/api/contact' });
 
 app.get('/api/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+
+// Ensure MinIO bucket exists
+await ensureBucket();
 
 const adminExists = db.prepare('SELECT id FROM admin_users WHERE email = ?').get(config.adminEmail);
 if (!adminExists) {

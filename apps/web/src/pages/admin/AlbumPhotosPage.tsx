@@ -183,7 +183,7 @@ export function AlbumPhotosPage() {
                         </Tag>
                       )}
                       <Image
-                        src={`/uploads/photos/${photo.album_id}/${photo.filename}`}
+                        src={`/api/photos/${photo.id}/thumb`}
                         alt={photo.original_name}
                         style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
                       />

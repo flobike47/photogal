@@ -1,25 +1,18 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { nanoid } from 'nanoid';
-import { createWriteStream, statSync, existsSync } from 'fs';
-import { mkdir, unlink } from 'fs/promises';
-import { join, extname, basename, dirname } from 'path';
-import { pipeline } from 'stream/promises';
+import { extname, basename } from 'path';
 import { ZipArchive } from 'archiver';
 import sharp from 'sharp';
 import { db } from '../db.js';
-import { config } from '../config.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { upload, download, downloadBuffer, remove, exists } from '../storage.js';
+import { config } from '../config.js';
 import type { Photo } from '../types.js';
 
 const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/heic',
-  'image/heif',
-  'image/avif',
-  'image/tiff',
+  'image/jpeg', 'image/png', 'image/webp',
+  'image/gif', 'image/heic', 'image/heif',
+  'image/avif', 'image/tiff',
 ]);
 
 function uniqueName(seen: Set<string>, original: string): string {
@@ -33,16 +26,20 @@ function uniqueName(seen: Set<string>, original: string): string {
   return candidate;
 }
 
-async function generateThumb(srcPath: string, thumbPath: string): Promise<void> {
-  await mkdir(dirname(thumbPath), { recursive: true });
-  await sharp(srcPath)
-    .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 80 })
-    .toFile(thumbPath);
+function photoKey(photo: Photo): string {
+  return `photos/${photo.album_id}/${photo.filename}`;
 }
 
-function thumbPath(photo: Photo): string {
-  return join(config.uploadsDir, 'photos', photo.album_id, 'thumbs', `${photo.id}.jpg`);
+function thumbKey(photo: Photo): string {
+  return `photos/${photo.album_id}/thumbs/${photo.id}.jpg`;
+}
+
+async function generateAndUploadThumb(srcBuffer: Buffer, tKey: string): Promise<void> {
+  const thumbBuffer = await sharp(srcBuffer)
+    .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  await upload(tKey, thumbBuffer, 'image/jpeg');
 }
 
 export const photoRoutes: FastifyPluginAsync = async (app) => {
@@ -51,26 +48,40 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     const photo = db.prepare('SELECT * FROM photos WHERE id = ?').get(request.params.id) as Photo | undefined;
     if (!photo) return reply.status(404).send({ error: 'Photo introuvable' });
 
-    const thumb = thumbPath(photo);
+    const tKey = thumbKey(photo);
 
-    if (!existsSync(thumb)) {
-      const src = join(config.uploadsDir, 'photos', photo.album_id, photo.filename);
-      if (!existsSync(src)) return reply.status(404).send({ error: 'Fichier introuvable' });
+    if (!await exists(tKey)) {
+      const pKey = photoKey(photo);
+      if (!await exists(pKey)) return reply.status(404).send({ error: 'Fichier introuvable' });
       try {
-        await generateThumb(src, thumb);
+        const srcBuffer = await downloadBuffer(pKey);
+        await generateAndUploadThumb(srcBuffer, tKey);
       } catch {
-        // Fall back to original if sharp can't process this format
+        const stream = await download(pKey);
         return reply
           .header('Content-Type', photo.mime_type)
           .header('Cache-Control', 'public, max-age=3600')
-          .sendFile(`photos/${photo.album_id}/${photo.filename}`);
+          .send(stream);
       }
     }
 
+    const stream = await download(tKey);
     return reply
       .header('Content-Type', 'image/jpeg')
       .header('Cache-Control', 'public, max-age=31536000, immutable')
-      .sendFile(`photos/${photo.album_id}/thumbs/${photo.id}.jpg`);
+      .send(stream);
+  });
+
+  // Public: full-resolution photo
+  app.get<{ Params: { id: string } }>('/:id/original', async (request, reply) => {
+    const photo = db.prepare('SELECT * FROM photos WHERE id = ?').get(request.params.id) as Photo | undefined;
+    if (!photo) return reply.status(404).send({ error: 'Photo introuvable' });
+
+    const stream = await download(photoKey(photo));
+    return reply
+      .header('Content-Type', photo.mime_type)
+      .header('Cache-Control', 'public, max-age=3600')
+      .send(stream);
   });
 
   // Public: download a photo by its share token
@@ -80,10 +91,11 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
       .get(request.params.shareToken) as Photo | undefined;
     if (!photo) return reply.status(404).send({ error: 'Photo introuvable' });
 
+    const stream = await download(photoKey(photo));
     return reply
       .header('Content-Type', photo.mime_type)
       .header('Content-Disposition', `attachment; filename="${encodeURIComponent(photo.original_name)}"`)
-      .sendFile(`photos/${photo.album_id}/${photo.filename}`);
+      .send(stream);
   });
 
   // Public: download selected photos as zip
@@ -100,7 +112,6 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     const photos = db
       .prepare(`SELECT * FROM photos WHERE share_token IN (${placeholders})`)
       .all(...shareTokens) as Photo[];
-
     if (photos.length === 0) return reply.status(404).send({ error: 'Photos introuvables' });
 
     reply.hijack();
@@ -114,10 +125,10 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
 
     const seen = new Set<string>();
     for (const photo of photos) {
-      const filePath = join(config.uploadsDir, 'photos', photo.album_id, photo.filename);
-      if (existsSync(filePath)) {
-        archive.file(filePath, { name: uniqueName(seen, basename(photo.original_name)) });
-      }
+      try {
+        const stream = await download(photoKey(photo));
+        archive.append(stream, { name: uniqueName(seen, basename(photo.original_name)) });
+      } catch { /* skip missing */ }
     }
 
     await archive.finalize();
@@ -127,9 +138,6 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Params: { albumId: string } }>('/upload/:albumId', { preHandler: [authenticate] }, async (request, reply) => {
     const album = db.prepare('SELECT id FROM albums WHERE id = ?').get(request.params.albumId);
     if (!album) return reply.status(404).send({ error: 'Album introuvable' });
-
-    const albumDir = join(config.uploadsDir, 'photos', request.params.albumId);
-    await mkdir(albumDir, { recursive: true });
 
     const uploaded: Photo[] = [];
     const parts = request.files();
@@ -143,23 +151,29 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
       const ext = extname(part.filename) || '.jpg';
       const id = nanoid();
       const filename = `${id}${ext}`;
-      const filePath = join(albumDir, filename);
-
-      await pipeline(part.file, createWriteStream(filePath));
-
-      const { size } = statSync(filePath);
       const now = new Date().toISOString();
+
+      const buffer = await part.toBuffer();
+
+      // Check storage limit
+      if (config.storageLimitGb) {
+        const { total } = db.prepare('SELECT COALESCE(SUM(size), 0) as total FROM photos').get() as { total: number };
+        if (total + buffer.length > config.storageLimitGb * 1024 * 1024 * 1024) {
+          return reply.status(413).send({ error: `Limite de stockage atteinte (${config.storageLimitGb} Go). Supprimez des photos pour libérer de l'espace.` });
+        }
+      }
+
+      await upload(`photos/${request.params.albumId}/${filename}`, buffer, part.mimetype);
 
       db.prepare(
         `INSERT INTO photos (id, album_id, filename, original_name, mime_type, size, share_token, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(id, request.params.albumId, filename, part.filename, part.mimetype, size, nanoid(12), now);
+      ).run(id, request.params.albumId, filename, part.filename, part.mimetype, buffer.length, nanoid(12), now);
 
       const photo = db.prepare('SELECT * FROM photos WHERE id = ?').get(id) as Photo;
       uploaded.push(photo);
 
-      // Generate thumbnail asynchronously (best-effort)
-      generateThumb(filePath, thumbPath(photo)).catch(() => {});
+      generateAndUploadThumb(buffer, thumbKey(photo)).catch(() => {});
     }
 
     return reply.status(201).send({ photos: uploaded });
@@ -171,15 +185,8 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     if (!photo) return reply.status(404).send({ error: 'Photo introuvable' });
 
     db.prepare('DELETE FROM photos WHERE id = ?').run(request.params.id);
-
-    try {
-      await unlink(join(config.uploadsDir, 'photos', photo.album_id, photo.filename));
-    } catch { /* file may already be gone */ }
-
-    // Clean up thumb too
-    try {
-      await unlink(thumbPath(photo));
-    } catch { /* may not exist */ }
+    await remove(photoKey(photo));
+    await remove(thumbKey(photo));
 
     return reply.status(204).send();
   });

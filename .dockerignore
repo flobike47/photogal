@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+.git
+.env
+**/dist
+uploads
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
+.idea
+.claude

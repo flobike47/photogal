@@ -15,7 +15,10 @@ import {
   Radio,
   Avatar,
   Alert,
+  Progress,
+  Statistic,
 } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import {
   UploadOutlined,
   SaveOutlined,
@@ -24,6 +27,7 @@ import {
   GlobalOutlined,
   PictureOutlined,
   UserOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import type { Color } from 'antd/es/color-picker';
@@ -137,6 +141,12 @@ export function SettingsPage() {
   const [passwordForm] = Form.useForm();
   const [msg, ctxHolder] = message.useMessage();
   const { config, setConfig } = useSiteConfigStore();
+
+  const { data: storageStats } = useQuery({
+    queryKey: ['storage-stats'],
+    queryFn: () => apiClient.get<{ used_bytes: number; limit_gb: number | null }>('/config/storage').then(r => r.data),
+    refetchInterval: 30_000,
+  });
 
   const [primaryColor, setPrimaryColor] = useState(config.primary_color || '#1677ff');
   const [headingFont, setHeadingFont] = useState(config.heading_font || 'cormorant');
@@ -409,6 +419,75 @@ export function SettingsPage() {
           </Button>
         </Form>
       ),
+    },
+    {
+      key: 'storage',
+      label: <Space><DatabaseOutlined />Stockage</Space>,
+      children: (() => {
+        const usedBytes = storageStats?.used_bytes ?? 0;
+        const usedGb = usedBytes / (1024 ** 3);
+        const limitGb = storageStats?.limit_gb ?? null;
+        const percent = limitGb ? Math.min(Math.round((usedGb / limitGb) * 100), 100) : null;
+        const status = percent != null ? (percent >= 90 ? 'exception' : percent >= 70 ? 'normal' : 'success') : 'normal';
+
+        return (
+          <div style={{ maxWidth: 520 }}>
+            <Divider orientation="left">Utilisation actuelle</Divider>
+            <Row gutter={24} style={{ marginBottom: 24 }}>
+              <Col span={12}>
+                <Statistic
+                  title="Espace utilisé"
+                  value={usedGb < 1 ? (usedBytes / (1024 ** 2)).toFixed(0) : usedGb.toFixed(2)}
+                  suffix={usedGb < 1 ? 'Mo' : 'Go'}
+                  valueStyle={{ color: percent != null && percent >= 90 ? '#ff4d4f' : undefined }}
+                />
+              </Col>
+              {limitGb && (
+                <Col span={12}>
+                  <Statistic title="Limite" value={limitGb} suffix="Go" />
+                </Col>
+              )}
+            </Row>
+
+            {limitGb && percent != null && (
+              <Progress
+                percent={percent}
+                status={status}
+                strokeColor={percent >= 90 ? '#ff4d4f' : percent >= 70 ? '#faad14' : '#52c41a'}
+                style={{ marginBottom: 24 }}
+                format={(p) => `${p}%`}
+              />
+            )}
+
+            {percent != null && percent >= 90 && (
+              <Alert
+                type="error"
+                showIcon
+                message="Espace presque saturé"
+                description="Supprimez des photos ou albums pour libérer de l'espace, ou augmentez la limite."
+                style={{ marginBottom: 24 }}
+              />
+            )}
+            {percent != null && percent >= 70 && percent < 90 && (
+              <Alert
+                type="warning"
+                showIcon
+                message="Espace bientôt saturé"
+                description={`Il vous reste ${((limitGb! - usedGb)).toFixed(2)} Go disponibles.`}
+                style={{ marginBottom: 24 }}
+              />
+            )}
+
+            <Divider orientation="left">Limite de stockage</Divider>
+            <Alert
+              type="info"
+              showIcon
+              message={limitGb ? `Limite fixée à ${limitGb} Go via variable d'environnement STORAGE_LIMIT_GB.` : "Aucune limite définie. Ajoutez STORAGE_LIMIT_GB dans votre .env pour activer."}
+              description="Les uploads sont bloqués si la limite est atteinte."
+            />
+          </div>
+        );
+      })(),
     },
     {
       key: 'security',

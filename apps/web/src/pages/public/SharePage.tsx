@@ -31,7 +31,7 @@ function PhotoCard({
 }) {
   const [visible, setVisible] = useState(false);
   const src = `/api/photos/${photo.id}/thumb`;
-  const fullSrc = `/uploads/photos/${photo.album_id}/${photo.filename}`;
+  const fullSrc = `/api/photos/${photo.id}/original`;
 
   return (
     <div className="pg-photo-card" style={{ position: 'relative' }}>

@@ -1,22 +1,9 @@
-import { config as dotenvConfig } from 'dotenv';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
-import { mkdir } from 'fs/promises';
-import sharp from 'sharp';
 import Database from 'better-sqlite3';
+import sharp from 'sharp';
+import { config } from '../config.js';
+import { ensureBucket, upload, downloadBuffer, exists } from '../storage.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenvConfig({ path: resolve(__dirname, '../../../../.env') });
-
-const uploadsDir = resolve(process.env.UPLOADS_DIR ?? './uploads');
-const dbPath = resolve(uploadsDir, 'photogal.db');
-
-if (!existsSync(dbPath)) {
-  console.error(`Database not found at ${dbPath}`);
-  process.exit(1);
-}
-
+const dbPath = process.env.DB_PATH ?? config.dbPath;
 const db = new Database(dbPath);
 
 interface Photo {
@@ -26,8 +13,9 @@ interface Photo {
   mime_type: string;
 }
 
-const photos = db.prepare('SELECT id, album_id, filename, mime_type FROM photos ORDER BY created_at ASC').all() as Photo[];
+await ensureBucket();
 
+const photos = db.prepare('SELECT id, album_id, filename, mime_type FROM photos ORDER BY created_at ASC').all() as Photo[];
 console.log(`Found ${photos.length} photos to process.`);
 
 let generated = 0;
@@ -35,26 +23,22 @@ let skipped = 0;
 let failed = 0;
 
 for (const photo of photos) {
-  const thumbPath = resolve(uploadsDir, 'photos', photo.album_id, 'thumbs', `${photo.id}.jpg`);
+  const tKey = `photos/${photo.album_id}/thumbs/${photo.id}.jpg`;
 
-  if (existsSync(thumbPath)) {
+  if (await exists(tKey)) {
     skipped++;
     continue;
   }
 
-  const srcPath = resolve(uploadsDir, 'photos', photo.album_id, photo.filename);
-  if (!existsSync(srcPath)) {
-    console.warn(`  [SKIP] Source file missing: ${srcPath}`);
-    failed++;
-    continue;
-  }
+  const srcKey = `photos/${photo.album_id}/${photo.filename}`;
 
   try {
-    await mkdir(resolve(uploadsDir, 'photos', photo.album_id, 'thumbs'), { recursive: true });
-    await sharp(srcPath)
+    const srcBuffer = await downloadBuffer(srcKey);
+    const thumbBuffer = await sharp(srcBuffer)
       .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 80 })
-      .toFile(thumbPath);
+      .toBuffer();
+    await upload(tKey, thumbBuffer, 'image/jpeg');
     generated++;
     process.stdout.write(`\r  Generated: ${generated} | Skipped: ${skipped} | Failed: ${failed}`);
   } catch (err) {

@@ -1,13 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { nanoid } from 'nanoid';
-import { unlink } from 'fs/promises';
-import { join, extname, basename } from 'path';
-import { existsSync } from 'fs';
+import { extname, basename } from 'path';
 import { ZipArchive } from 'archiver';
 import { db } from '../db.js';
-import { config } from '../config.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authenticateUser } from '../middleware/authenticateUser.js';
+import { download, remove } from '../storage.js';
 import type { Album, Photo } from '../types.js';
 
 function getAlbumEmails(albumId: string): string[] {
@@ -22,6 +20,17 @@ function setAlbumEmails(albumId: string, emails: string[]) {
     const normalized = email.trim().toLowerCase();
     if (normalized) insert.run(albumId, normalized);
   }
+}
+
+function uniqueName(seen: Set<string>, original: string): string {
+  if (!seen.has(original)) { seen.add(original); return original; }
+  const ext = extname(original);
+  const base = original.slice(0, -ext.length || undefined);
+  let i = 2;
+  let candidate = `${base}_${i}${ext}`;
+  while (seen.has(candidate)) { i++; candidate = `${base}_${i}${ext}`; }
+  seen.add(candidate);
+  return candidate;
 }
 
 export const albumRoutes: FastifyPluginAsync = async (app) => {
@@ -92,19 +101,10 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
 
     const seen = new Set<string>();
     for (const photo of photos) {
-      const filePath = join(config.uploadsDir, 'photos', photo.album_id, photo.filename);
-      if (existsSync(filePath)) {
-        let name = basename(photo.original_name);
-        if (seen.has(name)) {
-          const ext = extname(name);
-          const base = name.slice(0, -ext.length || undefined);
-          let i = 2;
-          while (seen.has(`${base}_${i}${ext}`)) i++;
-          name = `${base}_${i}${ext}`;
-        }
-        seen.add(name);
-        archive.file(filePath, { name });
-      }
+      try {
+        const stream = await download(`photos/${photo.album_id}/${photo.filename}`);
+        archive.append(stream, { name: uniqueName(seen, basename(photo.original_name)) });
+      } catch { /* skip missing */ }
     }
 
     await archive.finalize();
@@ -208,9 +208,8 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
     db.prepare('DELETE FROM albums WHERE id = ?').run(request.params.id);
 
     for (const photo of photos) {
-      try {
-        await unlink(join(config.uploadsDir, 'photos', photo.album_id, photo.filename));
-      } catch { /* file may already be gone */ }
+      await remove(`photos/${photo.album_id}/${photo.filename}`);
+      await remove(`photos/${photo.album_id}/thumbs/${photo.id}.jpg`);
     }
 
     return reply.status(204).send();

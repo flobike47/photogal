@@ -1,18 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { createWriteStream } from 'fs';
-import { join } from 'path';
-import { pipeline } from 'stream/promises';
 import { db, getSiteConfig } from '../db.js';
 import { config } from '../config.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { upload, download, getContentType } from '../storage.js';
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-const MIME_EXT: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-  'image/gif': '.gif',
-};
 
 const ALLOWED_CONFIG_KEYS = new Set([
   'site_name', 'site_description', 'primary_color', 'contact_email',
@@ -24,6 +16,29 @@ const ALLOWED_CONFIG_KEYS = new Set([
 export const siteConfigRoutes: FastifyPluginAsync = async (app) => {
   // Public: get all site config
   app.get('/', async () => getSiteConfig());
+
+  // Admin: storage usage stats
+  app.get('/storage', { preHandler: [authenticate] }, async () => {
+    const { total } = db.prepare('SELECT COALESCE(SUM(size), 0) as total FROM photos').get() as { total: number };
+    return { used_bytes: total, limit_gb: config.storageLimitGb };
+  });
+
+  // Public: serve a logo/hero/about image from S3
+  app.get<{ Params: { type: string } }>('/asset/:type', async (request, reply) => {
+    const { type } = request.params;
+    if (!['logo', 'hero', 'about'].includes(type)) return reply.status(400).send({ error: 'Type invalide' });
+
+    const key = `logos/${type}`;
+    try {
+      const [stream, contentType] = await Promise.all([download(key), getContentType(key)]);
+      return reply
+        .header('Content-Type', contentType)
+        .header('Cache-Control', 'public, max-age=3600')
+        .send(stream);
+    } catch {
+      return reply.status(404).send({ error: 'Image introuvable' });
+    }
+  });
 
   // Admin: update site config (allowlisted keys only)
   app.put<{ Body: Record<string, string> }>('/', { preHandler: [authenticate] }, async (request) => {
@@ -40,24 +55,20 @@ export const siteConfigRoutes: FastifyPluginAsync = async (app) => {
   // Admin: upload an image asset (logo | hero | about)
   app.post<{ Params: { type: string } }>('/image/:type', { preHandler: [authenticate] }, async (request, reply) => {
     const { type } = request.params;
-    const allowed = ['logo', 'hero', 'about'];
-    if (!allowed.includes(type)) return reply.status(400).send({ error: 'Type invalide' });
+    if (!['logo', 'hero', 'about'].includes(type)) return reply.status(400).send({ error: 'Type invalide' });
 
     const part = await request.file();
     if (!part) return reply.status(400).send({ error: 'Aucun fichier fourni' });
 
     if (!ALLOWED_IMAGE_TYPES.has(part.mimetype)) {
-      await part.toBuffer(); // drain stream to avoid memory leak
+      await part.toBuffer();
       return reply.status(400).send({ error: 'Format non autorisé. Formats acceptés : JPEG, PNG, WebP, GIF.' });
     }
 
-    const ext = MIME_EXT[part.mimetype];
-    const filename = `${type}${ext}`;
-    const dest = join(config.uploadsDir, 'logos', filename);
+    const buffer = await part.toBuffer();
+    await upload(`logos/${type}`, buffer, part.mimetype);
 
-    await pipeline(part.file, createWriteStream(dest));
-
-    const url = `/uploads/logos/${filename}`;
+    const url = `/api/config/asset/${type}`;
     const key = type === 'logo' ? 'logo_url' : type === 'hero' ? 'hero_image_url' : 'about_image_url';
     db.prepare('INSERT OR REPLACE INTO site_config (key, value) VALUES (?, ?)').run(key, url);
 
