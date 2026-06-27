@@ -5,6 +5,9 @@ import fastifyHelmet from '@fastify/helmet';
 import fastifyCookie from '@fastify/cookie';
 import fastifyJwt from '@fastify/jwt';
 import fastifyMultipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
+import { resolve } from 'path';
+import { existsSync } from 'fs';
 import { config } from './config.js';
 import { db } from './db.js';
 import { ensureBucket } from './storage.js';
@@ -26,13 +29,7 @@ const app = Fastify({
 });
 
 await app.register(fastifyHelmet, {
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'none'"],
-      scriptSrc: ["'none'"],
-      objectSrc: ["'none'"],
-    },
-  },
+  contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 });
 await app.register(fastifyCors, { origin: config.corsOrigin, credentials: true });
@@ -50,6 +47,18 @@ await app.register(siteConfigRoutes, { prefix: '/api/config' });
 await app.register(contactRoutes, { prefix: '/api/contact' });
 
 app.get('/api/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+
+// Serve React SPA in production (web dist is bundled into the API image)
+const webDist = resolve('./apps/web/dist');
+if (existsSync(webDist)) {
+  await app.register(fastifyStatic, { root: webDist, wildcard: false });
+  app.setNotFoundHandler(async (request, reply) => {
+    if (request.url.startsWith('/api')) {
+      return reply.status(404).send({ error: 'Not found' });
+    }
+    return reply.sendFile('index.html', webDist);
+  });
+}
 
 // Ensure MinIO bucket exists
 await ensureBucket();

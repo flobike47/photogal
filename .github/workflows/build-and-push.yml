@@ -9,7 +9,6 @@ on:
 env:
   PLATFORMS: linux/arm64
   API_IMAGE: photogal-api
-  WEB_IMAGE: photogal-web
 
 concurrency:
   group: build-and-push-${{ github.ref }}
@@ -17,7 +16,7 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # API — Fastify + better-sqlite3 + sharp
+  # API — Fastify + React build intégré (un seul service, un seul port)
   # ---------------------------------------------------------------------------
   build-api:
     name: Build & push API
@@ -53,6 +52,8 @@ jobs:
           context: .
           containerfiles: |
             ./apps/api/Dockerfile
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
 
       - name: Push API to registry
         id: push-image
@@ -64,10 +65,10 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_USERPASSWORD }}
 
-      - name: Print pushed API image
+      - name: Print pushed image
         run: echo "Pushed → ${{ steps.push-image.outputs.registry-paths }}"
 
-      - name: Job summary API
+      - name: Job summary
         run: |
           {
             echo "## API"
@@ -79,77 +80,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
-  # Web — bundle Vite servi par nginx
-  # VITE_GOOGLE_CLIENT_ID est injecté au build (variable publique côté client)
-  # ---------------------------------------------------------------------------
-  build-web:
-    name: Build & push Web
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Short SHA
-        id: vars
-        run: echo "sha=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Login to registry
-        run: |
-          echo "Registry host: ${{ secrets.REGISTRY_URL }}"
-          echo "${{ secrets.REGISTRY_USERPASSWORD }}" | podman login \
-            --username "${{ secrets.REGISTRY_USERNAME }}" \
-            --password-stdin \
-            "${{ secrets.REGISTRY_URL }}"
-
-      - name: Build Web image
-        id: build-image
-        uses: redhat-actions/buildah-build@v2
-        with:
-          image: ${{ env.WEB_IMAGE }}
-          tags: latest sha-${{ steps.vars.outputs.sha }}
-          platforms: ${{ env.PLATFORMS }}
-          context: .
-          containerfiles: |
-            ./apps/web/Dockerfile
-          build-args: |
-            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-
-      - name: Push Web to registry
-        id: push-image
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
-          registry: ${{ secrets.REGISTRY_URL }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_USERPASSWORD }}
-
-      - name: Print pushed Web image
-        run: echo "Pushed → ${{ steps.push-image.outputs.registry-paths }}"
-
-      - name: Job summary Web
-        run: |
-          {
-            echo "## Web"
-            echo ""
-            echo "| Tag | Image |"
-            echo "| --- | --- |"
-            echo "| \`latest\` | \`${{ env.WEB_IMAGE }}:latest\` |"
-            echo "| \`sha-${{ steps.vars.outputs.sha }}\` | \`${{ env.WEB_IMAGE }}:sha-${{ steps.vars.outputs.sha }}\` |"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  # ---------------------------------------------------------------------------
-  # Redéploiement Portainer une fois les deux images publiées
+  # Redéploiement Portainer
   # ---------------------------------------------------------------------------
   redeploy-portainer:
     name: Trigger Portainer redeploy
     runs-on: ubuntu-latest
-    needs: [build-api, build-web]
+    needs: [build-api]
     if: success()
     steps:
       - name: Call Portainer stack webhook
@@ -164,7 +100,7 @@ jobs:
           curl -fsSL -X POST "$WEBHOOK" \
             -H 'Content-Length: 0' \
             --max-time 30
-          echo "Portainer notifié — la stack va pull les nouvelles images."
+          echo "Portainer notifié — la stack va pull la nouvelle image."
 
       - name: Final summary
         if: always()
@@ -175,24 +111,10 @@ jobs:
             echo ""
             echo "**Commit :** [\`$SHORT_SHA\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})"
             echo ""
-            echo "### Images publiées"
-            echo ""
             echo "| Service | Tags |"
             echo "| --- | --- |"
-            echo "| API | \`${{ env.API_IMAGE }}:latest\` · \`${{ env.API_IMAGE }}:sha-$SHORT_SHA\` |"
-            echo "| Web | \`${{ env.WEB_IMAGE }}:latest\` · \`${{ env.WEB_IMAGE }}:sha-$SHORT_SHA\` |"
-            echo ""
-            echo "### Liens"
+            echo "| API (+ Web) | \`${{ env.API_IMAGE }}:latest\` · \`${{ env.API_IMAGE }}:sha-$SHORT_SHA\` |"
             echo ""
             echo "- [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "- Portainer : webhook déclenché"
           } >> "$GITHUB_STEP_SUMMARY"
-
-          echo ""
-          echo "===================="
-          echo "Images publiées :"
-          echo "  ${{ env.API_IMAGE }}:latest"
-          echo "  ${{ env.API_IMAGE }}:sha-$SHORT_SHA"
-          echo "  ${{ env.WEB_IMAGE }}:latest"
-          echo "  ${{ env.WEB_IMAGE }}:sha-$SHORT_SHA"
-          echo "===================="
