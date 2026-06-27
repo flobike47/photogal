@@ -47,7 +47,7 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.API_IMAGE }}
-          tags: latest sha-${{ steps.vars.outputs.sha }}
+          tags: latest
           platforms: ${{ env.PLATFORMS }}
           context: .
           containerfiles: |
@@ -76,7 +76,6 @@ jobs:
             echo "| Tag | Image |"
             echo "| --- | --- |"
             echo "| \`latest\` | \`${{ env.API_IMAGE }}:latest\` |"
-            echo "| \`sha-${{ steps.vars.outputs.sha }}\` | \`${{ env.API_IMAGE }}:sha-${{ steps.vars.outputs.sha }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
@@ -111,9 +110,9 @@ jobs:
             echo ""
             echo "**Commit :** [\`$SHORT_SHA\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})"
             echo ""
-            echo "| Service | Tags |"
+            echo "| Service | Tag |"
             echo "| --- | --- |"
-            echo "| API (+ Web) | \`${{ env.API_IMAGE }}:latest\` · \`${{ env.API_IMAGE }}:sha-$SHORT_SHA\` |"
+            echo "| API (+ Web) | \`${{ env.API_IMAGE }}:latest\` |"
             echo ""
             echo "- [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "- Portainer : webhook déclenché"
