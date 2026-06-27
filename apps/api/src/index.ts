@@ -30,6 +30,8 @@ const app = Fastify({
 
 await app.register(fastifyHelmet, {
   contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,  // autorise l'iframe du bouton Google
+  crossOriginOpenerPolicy: false,    // autorise la popup Google à communiquer avec la page
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 });
 await app.register(fastifyCors, { origin: config.corsOrigin, credentials: true });
