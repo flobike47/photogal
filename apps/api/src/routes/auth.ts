@@ -11,8 +11,8 @@ const googleClient = new OAuth2Client();
 const COOKIE_NAME = 'pg_session';
 const COOKIE_OPTS = {
   httpOnly: true,
-  secure: config.nodeEnv === 'production',
-  sameSite: 'strict' as const,
+  secure: config.cookieSecure,
+  sameSite: 'lax' as const,
   path: '/',
   maxAge: 7 * 24 * 60 * 60,
 };
