@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Spin, Modal, Input, Form, message } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiClient } from '../../api/client';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { useAuthStore } from '../../store/authStore';
@@ -16,7 +16,15 @@ export function HomePage() {
   const isDark = (config.site_theme ?? 'dark') !== 'light';
   const isMobile = useWindowWidth() < 768;
   const navigate = useNavigate();
+  const location = useLocation();
   const [msgApi, contextHolder] = message.useMessage();
+
+  useEffect(() => {
+    if (location.hash === '#albums') {
+      const el = document.getElementById('albums');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [location.hash]);
   const [passwordModal, setPasswordModal] = useState<{ album: Album } | null>(null);
   const [passwordInput, setPasswordInput] = useState('');
   const [unlocking, setUnlocking] = useState(false);
@@ -380,7 +388,7 @@ export function HomePage() {
 
       {/* ════ ALBUMS ════ */}
       {(listingLoading || listingAlbums.length > 0) && (
-        <section style={{ background: t.galleries, padding: isMobile ? '64px 16px 80px' : '96px 48px 120px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+        <section id="albums" style={{ background: t.galleries, padding: isMobile ? '64px 16px 80px' : '96px 48px 120px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
           <div style={{ marginBottom: 64 }}>
             <p style={{ color: t.galleriesLabel, fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', margin: '0 0 14px', fontFamily: 'Inter, sans-serif' }}>
               Galeries

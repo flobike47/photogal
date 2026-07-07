@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSiteConfigStore } from '../store/siteConfigStore';
 import { useAuthStore } from '../store/authStore';
 import { useWindowWidth } from '../hooks/useWindowWidth';
@@ -17,14 +17,37 @@ export function PublicLayout() {
   const { config } = useSiteConfigStore();
   const { isAuthenticated, isAdmin, setAuth, logout } = useAuthStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const width = useWindowWidth();
   const isMobile = width < 768;
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [albumsVisible, setAlbumsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = document.getElementById('albums');
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setAlbumsVisible(entry.isIntersecting),
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [location.pathname]);
   const googleBtnRef = useRef<HTMLDivElement>(null);
   const googleReady = useRef(false);
 
   const isHome = location.pathname === '/';
+
+  const scrollToAlbums = () => {
+    setMenuOpen(false);
+    const el = document.getElementById('albums');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/#albums');
+    }
+  };
   const isDark = (config.site_theme ?? 'dark') !== 'light';
   const headerSolid = scrolled || !isHome || menuOpen;
   const headerDark = isHome || isDark;
@@ -152,7 +175,13 @@ export function PublicLayout() {
         {/* Desktop nav */}
         {!isMobile && (
           <nav style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
-            <Link to="/" style={navLinkStyle(location.pathname === '/')}>Accueil</Link>
+            <button
+              onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, ...navLinkStyle(isHome && !albumsVisible) }}
+            >
+              Accueil
+            </button>
+            <button onClick={scrollToAlbums} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, ...navLinkStyle(albumsVisible) }}>Galerie</button>
             <Link to="/contact" style={navLinkStyle(location.pathname === '/contact')}>Contact</Link>
             {isAuthenticated && isAdmin && (
               <Link to="/admin" style={navLinkStyle(false)}>Admin</Link>
@@ -213,8 +242,14 @@ export function PublicLayout() {
             visibility: menuOpen ? 'visible' : 'hidden',
           }}
         >
+          <button
+            onClick={() => { setMenuOpen(false); navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 28, fontWeight: 300, letterSpacing: '0.12em', fontFamily: 'inherit', padding: 0, borderBottom: (isHome && !albumsVisible) ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent', paddingBottom: 4 }}
+            className="pg-heading"
+          >
+            Accueil
+          </button>
           {[
-            { to: '/', label: 'Accueil' },
             { to: '/contact', label: 'Contact' },
             ...(isAuthenticated && isAdmin ? [{ to: '/admin', label: 'Admin' }] : []),
           ].map(({ to, label }) => (
@@ -228,6 +263,13 @@ export function PublicLayout() {
               {label}
             </Link>
           ))}
+          <button
+            onClick={scrollToAlbums}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 28, fontWeight: 300, letterSpacing: '0.12em', fontFamily: 'inherit', padding: 0, borderBottom: albumsVisible ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent', paddingBottom: 4 }}
+            className="pg-heading"
+          >
+            Galerie
+          </button>
 
           {isAuthenticated ? (
             <button
