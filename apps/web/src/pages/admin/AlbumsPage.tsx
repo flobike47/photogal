@@ -24,9 +24,10 @@ import {
   PictureOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../../api/client';
 import dayjs from 'dayjs';
@@ -38,6 +39,9 @@ interface AlbumForm {
   name: string;
   description?: string;
   is_public: boolean;
+  is_downloadable: boolean;
+  is_portfolio: boolean;
+  password?: string;
   allowed_emails: string[];
 }
 
@@ -47,6 +51,9 @@ export function AlbumsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Album | null>(null);
   const [form] = Form.useForm<AlbumForm>();
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-albums'],
@@ -94,21 +101,44 @@ export function AlbumsPage() {
     },
   });
 
+  const uploadCover = async (file: File, albumId: string) => {
+    setCoverUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await apiClient.post(`/albums/${albumId}/cover`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const url = `/api/albums/${albumId}/cover?t=${Date.now()}`;
+      setCoverPreview(url);
+      qc.invalidateQueries({ queryKey: ['admin-albums'] });
+      msg.success('Couverture mise à jour');
+    } catch {
+      msg.error('Erreur lors de l\'upload');
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
   const openCreate = () => {
     setEditing(null);
+    setCoverPreview(null);
     form.resetFields();
-    form.setFieldsValue({ is_public: true, allowed_emails: [] });
+    form.setFieldsValue({ is_public: true, is_downloadable: true, is_portfolio: false, allowed_emails: [] });
     setModalOpen(true);
   };
 
   const openEdit = async (album: Album) => {
     setEditing(album);
-    // Fetch album details to get allowed_emails
+    setCoverPreview(album.cover_url ? `/api/albums/${album.id}/cover?t=${Date.now()}` : null);
     const { data } = await apiClient.get<Album>(`/albums/${album.id}`);
     form.setFieldsValue({
       name: data.name,
       description: data.description,
       is_public: data.is_public === 1,
+      is_downloadable: data.is_downloadable !== 0,
+      is_portfolio: data.is_portfolio === 1,
+      password: '',
       allowed_emails: data.allowed_emails ?? [],
     });
     setModalOpen(true);
@@ -242,6 +272,50 @@ export function AlbumsPage() {
           </Form.Item>
           <Form.Item name="is_public" label="Visible publiquement" valuePropName="checked">
             <Switch checkedChildren="Public" unCheckedChildren="Privé" />
+          </Form.Item>
+          <Form.Item name="is_downloadable" label="Téléchargeable" valuePropName="checked">
+            <Switch checkedChildren="Oui" unCheckedChildren="Non" />
+          </Form.Item>
+          <Form.Item name="is_portfolio" label="Afficher dans le Portfolio" valuePropName="checked">
+            <Switch checkedChildren="Portfolio" unCheckedChildren="Albums" />
+          </Form.Item>
+          {editing && (
+            <Form.Item label="Image de couverture" extra="Optionnel — image indépendante des photos de l'album">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {coverPreview && (
+                  <img
+                    src={coverPreview}
+                    alt="couverture"
+                    style={{ width: 64, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #333' }}
+                  />
+                )}
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file && editing) await uploadCover(file, editing.id);
+                    e.target.value = '';
+                  }}
+                />
+                <Button
+                  icon={<UploadOutlined />}
+                  loading={coverUploading}
+                  onClick={() => coverInputRef.current?.click()}
+                >
+                  {coverPreview ? 'Changer la couverture' : 'Choisir une image'}
+                </Button>
+              </div>
+            </Form.Item>
+          )}
+          <Form.Item
+            name="password"
+            label="Mot de passe d'accès (albums privés)"
+            extra={editing ? "Laissez vide pour ne pas modifier · saisissez un texte pour changer · effacez tout pour supprimer" : "Optionnel — permet l'accès depuis la page d'accueil sans connexion"}
+          >
+            <Input.Password placeholder="Laisser vide = pas de mot de passe" autoComplete="new-password" />
           </Form.Item>
           <Form.Item
             name="allowed_emails"

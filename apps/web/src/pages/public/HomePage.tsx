@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { Spin } from 'antd';
+import { Link, useNavigate } from 'react-router-dom';
+import { Spin, Modal, Input, Form, message } from 'antd';
+import { LockOutlined } from '@ant-design/icons';
+import { useState } from 'react';
 import { apiClient } from '../../api/client';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { useAuthStore } from '../../store/authStore';
 import { useWindowWidth } from '../../hooks/useWindowWidth';
+import { htmlToInline } from '../../utils/html';
 import type { Album } from '../../types';
 
 export function HomePage() {
@@ -12,6 +15,29 @@ export function HomePage() {
   const { isAuthenticated } = useAuthStore();
   const isDark = (config.site_theme ?? 'dark') !== 'light';
   const isMobile = useWindowWidth() < 768;
+  const navigate = useNavigate();
+  const [msgApi, contextHolder] = message.useMessage();
+  const [passwordModal, setPasswordModal] = useState<{ album: Album } | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
+
+  const handleUnlock = async () => {
+    if (!passwordModal) return;
+    setUnlocking(true);
+    try {
+      const res = await apiClient.post<{ share_token: string }>(
+        `/albums/${passwordModal.album.id}/unlock`,
+        { password: passwordInput },
+      );
+      setPasswordModal(null);
+      setPasswordInput('');
+      navigate(`/share/${res.data.share_token}`);
+    } catch {
+      msgApi.error('Mot de passe incorrect');
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   const t = isDark ? {
     page: '#0a0a0a',
@@ -60,17 +86,55 @@ export function HomePage() {
     queryFn: () => apiClient.get<{ albums: Album[] }>('/albums/public').then((r) => r.data),
   });
 
+  const { data: listingData, isLoading: listingLoading } = useQuery({
+    queryKey: ['albums-listing'],
+    queryFn: () => apiClient.get<{ albums: Album[] }>('/albums/listing').then((r) => r.data),
+  });
+
   const { data: myData } = useQuery({
     queryKey: ['my-albums'],
     queryFn: () => apiClient.get<{ albums: Album[] }>('/albums/my').then((r) => r.data),
     enabled: isAuthenticated,
   });
 
-  const albums = data?.albums ?? [];
+  const portfolioAlbums = data?.albums ?? [];
+  const listingAlbums = listingData?.albums ?? [];
   const myAlbums = myData?.albums ?? [];
 
   return (
     <div style={{ background: t.page }}>
+      {contextHolder}
+
+      {/* ════ MODAL MOT DE PASSE ════ */}
+      <Modal
+        open={!!passwordModal}
+        title={
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <LockOutlined />
+            {passwordModal?.album.name}
+          </span>
+        }
+        okText="Accéder"
+        cancelText="Annuler"
+        confirmLoading={unlocking}
+        onOk={handleUnlock}
+        onCancel={() => { setPasswordModal(null); setPasswordInput(''); }}
+        afterClose={() => setPasswordInput('')}
+      >
+        <p style={{ color: '#666', marginBottom: 16 }}>
+          Cet album est protégé. Entrez le mot de passe pour y accéder.
+        </p>
+        <Form onFinish={handleUnlock}>
+          <Input.Password
+            prefix={<LockOutlined style={{ color: '#bbb' }} />}
+            placeholder="Mot de passe"
+            value={passwordInput}
+            onChange={e => setPasswordInput(e.target.value)}
+            autoFocus
+          />
+        </Form>
+      </Modal>
+
       {/* ════ HERO ════ */}
       <section
         style={{
@@ -115,12 +179,12 @@ export function HomePage() {
             margin: '0 0 32px',
             maxWidth: 980,
           }}
-        >
-          {config.hero_title}
-        </h1>
+          dangerouslySetInnerHTML={{ __html: htmlToInline(config.hero_title) }}
+        />
 
-        <p
-          className="pg-fade-up-3"
+        <div
+          className="pg-fade-up-3 pg-rich-text"
+          dangerouslySetInnerHTML={{ __html: config.hero_subtitle }}
           style={{
             color: 'rgba(255,255,255,0.48)',
             fontSize: 'clamp(14px, 1.8vw, 18px)',
@@ -129,13 +193,13 @@ export function HomePage() {
             margin: '0 0 52px',
             maxWidth: 480,
           }}
-        >
-          {config.hero_subtitle}
-        </p>
+        />
 
-        <a href="#galleries" className="pg-btn-ghost pg-fade-up-4">
-          Découvrir les galeries
-        </a>
+        <a
+          href="#galleries"
+          className="pg-btn-ghost pg-fade-up-4"
+          dangerouslySetInnerHTML={{ __html: htmlToInline(config.cta_button_text) || 'Découvrir les galeries' }}
+        />
 
         {/* Scroll cue */}
         <div
@@ -179,12 +243,16 @@ export function HomePage() {
               <p style={{ color: t.aboutLabel, fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', margin: '0 0 16px', fontFamily: 'Inter, sans-serif' }}>
                 À propos
               </p>
-              <h2 className="pg-heading" style={{ color: t.aboutH2, fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 300, margin: '0 0 28px', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
-                {config.about_title}
-              </h2>
-              <p style={{ color: t.aboutText, fontSize: 16, fontWeight: 300, lineHeight: 1.85, margin: '0 0 36px', whiteSpace: 'pre-line' }}>
-                {config.about_text}
-              </p>
+              <h2
+                className="pg-heading"
+                style={{ color: t.aboutH2, fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 300, margin: '0 0 28px', letterSpacing: '-0.01em', lineHeight: 1.15 }}
+                dangerouslySetInnerHTML={{ __html: htmlToInline(config.about_title) }}
+              />
+              <div
+                dangerouslySetInnerHTML={{ __html: config.about_text }}
+                style={{ color: t.aboutText, fontSize: 16, fontWeight: 300, lineHeight: 1.85, margin: '0 0 36px' }}
+                className="pg-rich-text"
+              />
               <Link to="/contact" className={t.aboutBtn} style={{ fontSize: 11 }}>
                 Me contacter
               </Link>
@@ -213,9 +281,8 @@ export function HomePage() {
             <h2
               className="pg-heading"
               style={{ color: t.galleriesH2, fontSize: 'clamp(32px, 5vw, 58px)', fontWeight: 300, margin: 0, letterSpacing: '-0.01em' }}
-            >
-              Nos galeries
-            </h2>
+              dangerouslySetInnerHTML={{ __html: htmlToInline(config.portfolio_title) || 'Portfolio' }}
+            />
           </div>
           <Link
             to="/contact"
@@ -232,9 +299,8 @@ export function HomePage() {
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = t.galleriesLinkHover; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = t.galleriesLink; }}
-          >
-            Réserver une séance →
-          </Link>
+            dangerouslySetInnerHTML={{ __html: htmlToInline(config.portfolio_cta_text) || 'Réserver une séance →' }}
+          />
         </div>
 
         {/* Albums grid */}
@@ -242,7 +308,7 @@ export function HomePage() {
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <Spin size="large" />
           </div>
-        ) : albums.length === 0 ? (
+        ) : portfolioAlbums.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '100px 0' }}>
             <p style={{ color: t.galleriesEmpty, fontSize: 15, letterSpacing: '0.1em' }}>
               Aucune galerie disponible pour l'instant
@@ -256,8 +322,8 @@ export function HomePage() {
               gap: 3,
             }}
           >
-            {albums.map((album, i) => {
-              const coverId = album.cover_photo_id?.replace(/\.[^/.]+$/, '');
+            {portfolioAlbums.map((album, i) => {
+              const coverSrc = album.cover_url || (album.cover_photo_id ? `/api/photos/${album.cover_photo_id.replace(/\.[^/.]+$/, '')}/thumb` : null);
               return (
               <Link
                 key={album.id}
@@ -265,9 +331,9 @@ export function HomePage() {
                 className="pg-album-card"
                 style={{ aspectRatio: '3/4' }}
               >
-                {coverId ? (
+                {coverSrc ? (
                   <img
-                    src={`/api/photos/${coverId}/thumb`}
+                    src={coverSrc}
                     alt={album.name}
                     loading="lazy"
                   />
@@ -312,6 +378,90 @@ export function HomePage() {
         )}
       </section>
 
+      {/* ════ ALBUMS ════ */}
+      {(listingLoading || listingAlbums.length > 0) && (
+        <section style={{ background: t.galleries, padding: isMobile ? '64px 16px 80px' : '96px 48px 120px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
+          <div style={{ marginBottom: 64 }}>
+            <p style={{ color: t.galleriesLabel, fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', margin: '0 0 14px', fontFamily: 'Inter, sans-serif' }}>
+              Galeries
+            </p>
+            <h2 className="pg-heading" style={{ color: t.galleriesH2, fontSize: 'clamp(32px, 5vw, 58px)', fontWeight: 300, margin: 0, letterSpacing: '-0.01em' }}>
+              Albums
+            </h2>
+          </div>
+
+          {listingLoading ? (
+            <div style={{ textAlign: 'center', padding: '80px 0' }}><Spin size="large" /></div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
+              {listingAlbums.map((album, i) => {
+                const coverSrc = album.cover_url || (album.cover_photo_id ? `/api/photos/${album.cover_photo_id.replace(/\.[^/.]+$/, '')}/thumb` : null);
+                const isPrivate = !album.share_token;
+                const hasPassword = !!album.has_password;
+
+                const cardInner = (
+                  <>
+                    {coverSrc ? (
+                      <img src={coverSrc} alt={album.name} loading="lazy" />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: `hsl(${(i * 53) % 360}, 12%, 16%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" opacity={0.2}>
+                          <circle cx="24" cy="24" r="22" stroke="white" strokeWidth="1.5" />
+                          <circle cx="24" cy="24" r="10" stroke="white" strokeWidth="1.5" />
+                          <circle cx="24" cy="24" r="3" fill="white" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="pg-album-overlay">
+                      <div className="pg-album-extras" style={{ marginBottom: 10 }}>
+                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', margin: 0, fontFamily: 'Inter, sans-serif' }}>
+                          {isPrivate
+                            ? (hasPassword ? '🔒 Protégé par mot de passe' : '🔒 Accès sur invitation')
+                            : `${album.photo_count ?? 0} photo${(album.photo_count ?? 0) !== 1 ? 's' : ''}`}
+                        </p>
+                      </div>
+                      <h3 className="pg-heading" style={{ color: '#fff', fontSize: 24, fontWeight: 300, margin: '0 0 12px', letterSpacing: '0.02em', lineHeight: 1.2 }}>
+                        {album.name}
+                      </h3>
+                      <div className="pg-album-extras">
+                        <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.3)', paddingBottom: 2, fontFamily: 'Inter, sans-serif' }}>
+                          {isPrivate ? (hasPassword ? 'Entrer le mot de passe →' : 'Accès sur invitation') : 'Voir la galerie →'}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
+
+                if (!isPrivate) {
+                  return (
+                    <Link key={album.id} to={`/share/${album.share_token}`} className="pg-album-card" style={{ aspectRatio: '3/4' }}>
+                      {cardInner}
+                    </Link>
+                  );
+                }
+                if (hasPassword) {
+                  return (
+                    <div
+                      key={album.id}
+                      className="pg-album-card"
+                      style={{ aspectRatio: '3/4', cursor: 'pointer' }}
+                      onClick={() => { setPasswordModal({ album }); setPasswordInput(''); }}
+                    >
+                      {cardInner}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={album.id} className="pg-album-card" style={{ aspectRatio: '3/4', cursor: 'default', opacity: 0.6 }}>
+                    {cardInner}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* ════ MES ALBUMS ════ */}
       {isAuthenticated && myAlbums.length > 0 && (
         <section style={{ background: t.galleries, padding: isMobile ? '64px 16px 80px' : '96px 48px 120px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
@@ -325,11 +475,11 @@ export function HomePage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
             {myAlbums.map((album, i) => {
-              const coverId = album.cover_photo_id?.replace(/\.[^/.]+$/, '');
+              const coverSrc = album.cover_url || (album.cover_photo_id ? `/api/photos/${album.cover_photo_id.replace(/\.[^/.]+$/, '')}/thumb` : null);
               return (
               <Link key={album.id} to={`/share/${album.share_token}`} className="pg-album-card" style={{ aspectRatio: '3/4' }}>
-                {coverId ? (
-                  <img src={`/api/photos/${coverId}/thumb`} alt={album.name} loading="lazy" />
+                {coverSrc ? (
+                  <img src={coverSrc} alt={album.name} loading="lazy" />
                 ) : (
                   <div style={{ width: '100%', height: '100%', background: `hsl(${(i * 53) % 360}, 12%, 16%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" opacity={0.2}>

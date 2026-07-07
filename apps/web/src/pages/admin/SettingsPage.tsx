@@ -35,9 +35,9 @@ import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import { apiClient } from '../../api/client';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
 import type { SiteConfig } from '../../store/siteConfigStore';
+import { RichTextEditor } from '../../components/RichTextEditor';
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
 
 const FONT_OPTIONS = [
   {
@@ -75,7 +75,7 @@ function ImageUploadField({
   aspectHint,
 }: {
   label: string;
-  type: 'logo' | 'hero' | 'about';
+  type: 'logo' | 'hero' | 'about' | 'contact';
   currentUrl: string;
   onSuccess: (url: string) => void;
   hint?: string;
@@ -116,7 +116,7 @@ function ImageUploadField({
             </div>
           )
         ) : (
-          <div style={{ width: type === 'hero' ? 160 : 72, height: type === 'hero' ? 90 : 72, background: '#f5f5f5', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9' }}>
+          <div style={{ width: type === 'hero' || type === 'contact' ? 160 : 72, height: type === 'hero' || type === 'contact' ? 90 : 72, background: '#f5f5f5', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9' }}>
             {type === 'about' ? <UserOutlined style={{ color: '#bbb', fontSize: 24 }} /> : <PictureOutlined style={{ color: '#bbb', fontSize: 24 }} />}
           </div>
         )}
@@ -154,12 +154,31 @@ export function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState(config.logo_url || '');
   const [heroImageUrl, setHeroImageUrl] = useState(config.hero_image_url || '');
   const [aboutImageUrl, setAboutImageUrl] = useState(config.about_image_url || '');
+  const [siteDescription, setSiteDescription] = useState(config.site_description || '');
+  const [footerText, setFooterText] = useState(config.footer_text || '');
+  const [heroTitle, setHeroTitle] = useState(config.hero_title || '');
+  const [heroSubtitle, setHeroSubtitle] = useState(config.hero_subtitle || '');
+  const [ctaButtonText, setCtaButtonText] = useState(config.cta_button_text || '');
+  const [portfolioTitle, setPortfolioTitle] = useState(config.portfolio_title || '');
+  const [portfolioCtatext, setPortfolioCtatext] = useState(config.portfolio_cta_text || '');
+  const [aboutTitle, setAboutTitle] = useState(config.about_title || '');
+  const [aboutText, setAboutText] = useState(config.about_text || '');
+  const [contactPageTitle, setContactPageTitle] = useState(config.contact_page_title || '');
+  const [contactBgUrl, setContactBgUrl] = useState(config.contact_bg_url || '');
+  const [contactBgColor, setContactBgColor] = useState(config.contact_bg_color || '');
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    identityForm.setFieldsValue({ site_name: config.site_name, site_description: config.site_description, contact_email: config.contact_email, footer_text: config.footer_text });
+    identityForm.setFieldsValue({ site_name: config.site_name, contact_email: config.contact_email });
+    setSiteDescription(config.site_description || '');
+    setFooterText(config.footer_text || '');
     appearanceForm.setFieldsValue({ heading_font: config.heading_font || 'cormorant' });
-    contentForm.setFieldsValue({ hero_title: config.hero_title, hero_subtitle: config.hero_subtitle, about_title: config.about_title, about_text: config.about_text });
+    setHeroTitle(config.hero_title || '');
+    setCtaButtonText(config.cta_button_text || '');
+    setPortfolioTitle(config.portfolio_title || '');
+    setPortfolioCtatext(config.portfolio_cta_text || '');
+    setAboutTitle(config.about_title || '');
+    setContactPageTitle(config.contact_page_title || '');
     socialForm.setFieldsValue({ social_instagram: config.social_instagram, social_facebook: config.social_facebook, social_pinterest: config.social_pinterest, social_website: config.social_website });
     setPrimaryColor(config.primary_color || '#1677ff');
     setHeadingFont(config.heading_font || 'cormorant');
@@ -167,6 +186,10 @@ export function SettingsPage() {
     setLogoUrl(config.logo_url || '');
     setHeroImageUrl(config.hero_image_url || '');
     setAboutImageUrl(config.about_image_url || '');
+    setHeroSubtitle(config.hero_subtitle || '');
+    setAboutText(config.about_text || '');
+    setContactBgUrl(config.contact_bg_url || '');
+    setContactBgColor(config.contact_bg_color || '');
   }, [config, identityForm, appearanceForm, contentForm, socialForm]);
 
   const save = (key: string) => async (values: Record<string, string>) => {
@@ -175,9 +198,6 @@ export function SettingsPage() {
       const res = await apiClient.put<SiteConfig>('/config', values);
       setConfig(res.data);
       if (values.site_name) document.title = values.site_name;
-      if (values.primary_color) {
-        // Ant Design ConfigProvider picks it up on next render via App.tsx
-      }
       if (values.heading_font) {
         document.documentElement.style.setProperty('--pg-heading-font', fontStacks[values.heading_font] ?? fontStacks.cormorant);
       }
@@ -192,6 +212,19 @@ export function SettingsPage() {
   const saveAppearance = async () => {
     const values = appearanceForm.getFieldsValue();
     await save('appearance')({ ...values, primary_color: primaryColor, heading_font: headingFont, site_theme: siteTheme, logo_url: logoUrl });
+  };
+
+  const saveContent = async () => {
+    await save('content')({
+      hero_title: heroTitle,
+      hero_subtitle: heroSubtitle,
+      cta_button_text: ctaButtonText,
+      portfolio_title: portfolioTitle,
+      portfolio_cta_text: portfolioCtatext,
+      about_title: aboutTitle,
+      about_text: aboutText,
+      contact_page_title: contactPageTitle,
+    });
   };
 
   const savePassword = async (values: { currentPassword: string; newPassword: string; confirmPassword: string }) => {
@@ -213,7 +246,7 @@ export function SettingsPage() {
       key: 'identity',
       label: 'Identité',
       children: (
-        <Form form={identityForm} layout="vertical" onFinish={save('identity')}>
+        <Form form={identityForm} layout="vertical">
           <Row gutter={24}>
             <Col span={24}>
               <ImageUploadField
@@ -237,17 +270,25 @@ export function SettingsPage() {
               </Form.Item>
             </Col>
             <Col span={24}>
-              <Form.Item name="site_description" label="Description courte">
-                <Input placeholder="Photographe professionnel basé à Paris" />
+              <Form.Item label="Description courte">
+                <RichTextEditor value={siteDescription} onChange={setSiteDescription} />
               </Form.Item>
             </Col>
             <Col span={24}>
-              <Form.Item name="footer_text" label="Texte du pied de page">
-                <Input placeholder="© 2024 VotreSite. Tous droits réservés." />
+              <Form.Item label="Texte du pied de page">
+                <RichTextEditor value={footerText} onChange={setFooterText} />
               </Form.Item>
             </Col>
           </Row>
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving.identity}>
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={saving.identity}
+            onClick={async () => {
+              const values = identityForm.getFieldsValue();
+              await save('identity')({ ...values, site_description: siteDescription, footer_text: footerText });
+            }}
+          >
             Sauvegarder
           </Button>
         </Form>
@@ -334,14 +375,31 @@ export function SettingsPage() {
       key: 'content',
       label: 'Contenu',
       children: (
-        <Form form={contentForm} layout="vertical" onFinish={save('content')}>
+        <Form form={contentForm} layout="vertical">
           <Divider orientation="left">Section hero</Divider>
-          <Form.Item name="hero_title" label="Grand titre">
-            <Input placeholder="Bienvenue sur PhotoGal" />
+          <Form.Item label="Grand titre">
+            <RichTextEditor value={heroTitle} onChange={setHeroTitle} />
           </Form.Item>
-          <Form.Item name="hero_subtitle" label="Sous-titre">
-            <TextArea rows={2} placeholder="Découvrez nos galeries photos et téléchargez vos favoris" />
+          <Form.Item label="Sous-titre">
+            <RichTextEditor value={heroSubtitle} onChange={setHeroSubtitle} />
           </Form.Item>
+          <Form.Item label="Texte du bouton CTA (hero)">
+            <RichTextEditor value={ctaButtonText} onChange={setCtaButtonText} />
+          </Form.Item>
+
+          <Divider orientation="left">Section Portfolio</Divider>
+          <Row gutter={24}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Titre de la section">
+                <RichTextEditor value={portfolioTitle} onChange={setPortfolioTitle} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Texte du lien CTA portfolio">
+                <RichTextEditor value={portfolioCtatext} onChange={setPortfolioCtatext} />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Divider orientation="left">Section «&nbsp;À propos&nbsp;»</Divider>
           <Alert
@@ -361,21 +419,23 @@ export function SettingsPage() {
               />
             </Col>
             <Col span={24}>
-              <Form.Item name="about_title" label="Titre de la section">
-                <Input placeholder="À propos" />
+              <Form.Item label="Titre de la section">
+                <RichTextEditor value={aboutTitle} onChange={setAboutTitle} />
               </Form.Item>
             </Col>
             <Col span={24}>
-              <Form.Item name="about_text" label="Biographie / présentation">
-                <TextArea
-                  rows={6}
-                  placeholder="Photographe passionné basé à Paris, je capture les moments qui comptent..."
-                />
+              <Form.Item label="Biographie / présentation">
+                <RichTextEditor value={aboutText} onChange={setAboutText} />
               </Form.Item>
             </Col>
           </Row>
 
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving.content}>
+          <Divider orientation="left">Page Contact</Divider>
+          <Form.Item label="Titre de la page contact">
+            <RichTextEditor value={contactPageTitle} onChange={setContactPageTitle} />
+          </Form.Item>
+
+          <Button type="primary" icon={<SaveOutlined />} onClick={saveContent} loading={saving.content}>
             Sauvegarder
           </Button>
         </Form>
@@ -385,39 +445,86 @@ export function SettingsPage() {
       key: 'social',
       label: 'Contact & Réseaux',
       children: (
-        <Form form={socialForm} layout="vertical" onFinish={save('social')}>
+        <div>
+          <Form form={socialForm} layout="vertical" onFinish={save('social')}>
+            <Alert
+              type="info"
+              showIcon
+              message="Les réseaux renseignés s'affichent dans le footer du site."
+              style={{ marginBottom: 24 }}
+            />
+            <Row gutter={24}>
+              <Col xs={24} sm={12}>
+                <Form.Item name="social_instagram" label={<Space><InstagramOutlined /> Instagram</Space>}>
+                  <Input placeholder="https://instagram.com/votreprofil" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item name="social_facebook" label={<Space><GlobalOutlined /> Facebook</Space>}>
+                  <Input placeholder="https://facebook.com/votrepage" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item name="social_pinterest" label="Pinterest">
+                  <Input placeholder="https://pinterest.com/votrepage" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item name="social_website" label={<Space><GlobalOutlined /> Site web externe</Space>}>
+                  <Input placeholder="https://votresite.com" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving.social}>
+              Sauvegarder
+            </Button>
+          </Form>
+
+          <Divider orientation="left">Arrière-plan page Contact</Divider>
           <Alert
             type="info"
             showIcon
-            message="Les réseaux renseignés s'affichent dans le footer du site."
+            message="Personnalisez le panneau gauche de la page Contact : photo ou couleur de fond."
             style={{ marginBottom: 24 }}
           />
-          <Row gutter={24}>
+          <Row gutter={24} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12}>
-              <Form.Item name="social_instagram" label={<Space><InstagramOutlined /> Instagram</Space>}>
-                <Input placeholder="https://instagram.com/votreprofil" />
-              </Form.Item>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>Couleur de fond (si pas d'image)</Text>
+              </div>
+              <ColorPicker
+                value={contactBgColor || '#0a0a0a'}
+                onChange={(c: Color) => setContactBgColor(c.toHexString())}
+                showText format="hex"
+                presets={[{
+                  label: 'Suggestions',
+                  colors: ['#0a0a0a', '#111827', '#1e293b', '#312e81', '#4a1942', '#064e3b', '#7c2d12'],
+                }]}
+              />
             </Col>
             <Col xs={24} sm={12}>
-              <Form.Item name="social_facebook" label={<Space><GlobalOutlined /> Facebook</Space>}>
-                <Input placeholder="https://facebook.com/votrepage" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="social_pinterest" label="Pinterest">
-                <Input placeholder="https://pinterest.com/votrepage" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item name="social_website" label={<Space><GlobalOutlined /> Site web externe</Space>}>
-                <Input placeholder="https://votresite.com" />
-              </Form.Item>
+              <ImageUploadField
+                label="Photo de fond (remplace la couleur)"
+                type="contact"
+                currentUrl={contactBgUrl}
+                onSuccess={(url) => {
+                  setContactBgUrl(url);
+                  setConfig({ ...config, contact_bg_url: url });
+                  save('contact_bg')({ contact_bg_url: url });
+                }}
+                aspectHint="Format portrait ou carré recommandé"
+              />
             </Col>
           </Row>
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving.social}>
-            Sauvegarder
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={saving.contact_bg}
+            onClick={() => save('contact_bg')({ contact_bg_color: contactBgColor, contact_bg_url: contactBgUrl })}
+          >
+            Sauvegarder le fond Contact
           </Button>
-        </Form>
+        </div>
       ),
     },
     {

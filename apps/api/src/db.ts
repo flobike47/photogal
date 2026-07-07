@@ -81,9 +81,19 @@ const defaultConfig: Record<string, string> = {
   social_website: '',
   heading_font: 'cormorant',
   site_theme: 'dark',
+  cta_button_text: 'Découvrir les galeries',
+  portfolio_title: 'Portfolio',
+  portfolio_cta_text: 'Réserver une séance →',
+  contact_page_title: 'Parlons de votre projet',
+  contact_bg_color: '',
+  contact_bg_url: '',
 };
 
 try { db.exec('ALTER TABLE admin_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
+try { db.exec('ALTER TABLE albums ADD COLUMN is_downloadable INTEGER NOT NULL DEFAULT 1'); } catch { /* already exists */ }
+try { db.exec('ALTER TABLE albums ADD COLUMN is_portfolio INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
+try { db.exec('ALTER TABLE albums ADD COLUMN password_hash TEXT'); } catch { /* already exists */ }
+try { db.exec('ALTER TABLE albums ADD COLUMN cover_url TEXT'); } catch { /* already exists */ }
 
 const insertConfig = db.prepare('INSERT OR IGNORE INTO site_config (key, value) VALUES (?, ?)');
 for (const [key, value] of Object.entries(defaultConfig)) {

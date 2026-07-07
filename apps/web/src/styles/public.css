@@ -188,3 +188,8 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
 .pg-input::placeholder, .pg-textarea::placeholder {
   color: rgba(0,0,0,0.3);
 }
+
+.pg-rich-text p { margin: 0 0 0.6em; }
+.pg-rich-text p:last-child { margin-bottom: 0; }
+.pg-rich-text strong { font-weight: 600; }
+.pg-rich-text em { font-style: italic; }

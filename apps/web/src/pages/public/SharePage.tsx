@@ -23,11 +23,13 @@ function PhotoCard({
   isSelected,
   onToggle,
   accentColor,
+  downloadable,
 }: {
   photo: Photo;
   isSelected: boolean;
   onToggle: () => void;
   accentColor: string;
+  downloadable: boolean;
 }) {
   const [visible, setVisible] = useState(false);
   const src = `/api/photos/${photo.id}/thumb`;
@@ -35,25 +37,26 @@ function PhotoCard({
 
   return (
     <div className="pg-photo-card" style={{ position: 'relative' }}>
-      {/* Selection checkbox */}
-      <div
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        style={{
-          position: 'absolute',
-          top: 10, left: 10,
-          zIndex: 10,
-          width: 22, height: 22,
-          borderRadius: 4,
-          border: `2px solid ${isSelected ? accentColor : 'rgba(255,255,255,0.55)'}`,
-          background: isSelected ? accentColor : 'rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.18s ease',
-          backdropFilter: 'blur(4px)',
-        }}
-      >
-        {isSelected && <CheckOutlined style={{ color: '#fff', fontSize: 11 }} />}
-      </div>
+      {downloadable && (
+        <div
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          style={{
+            position: 'absolute',
+            top: 10, left: 10,
+            zIndex: 10,
+            width: 22, height: 22,
+            borderRadius: 4,
+            border: `2px solid ${isSelected ? accentColor : 'rgba(255,255,255,0.55)'}`,
+            background: isSelected ? accentColor : 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.18s ease',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          {isSelected && <CheckOutlined style={{ color: '#fff', fontSize: 11 }} />}
+        </div>
+      )}
 
       <Image
         src={src}
@@ -70,21 +73,13 @@ function PhotoCard({
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>
                 Aperçu
               </span>
-              <a
-                href={`/api/photos/download/${photo.share_token}`}
-                download
-                onClick={(e) => e.stopPropagation()}
-                style={{ textDecoration: 'none' }}
-              >
-                <Button
-                  type="primary"
-                  size="small"
-                  icon={<DownloadOutlined />}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Télécharger
-                </Button>
-              </a>
+              {downloadable && (
+                <a href={`/api/photos/download/${photo.share_token}`} download onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
+                  <Button type="primary" size="small" icon={<DownloadOutlined />} onClick={(e) => e.stopPropagation()}>
+                    Télécharger
+                  </Button>
+                </a>
+              )}
               <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontFamily: 'Inter, sans-serif' }}>
                 {formatSize(photo.size)}
               </span>
@@ -229,29 +224,31 @@ export function SharePage() {
           {/* Actions header */}
           {photos.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <Tooltip title={allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}>
-                <button
-                  onClick={toggleAll}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'rgba(255,255,255,0.55)',
-                    padding: '8px 16px',
-                    fontSize: 11,
-                    letterSpacing: '0.15em',
-                    textTransform: 'uppercase',
-                    cursor: 'pointer',
-                    fontFamily: 'Inter, sans-serif',
-                    fontWeight: 500,
-                    transition: 'all 0.2s',
-                    borderRadius: 2,
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.5)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                >
-                  {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
-                </button>
-              </Tooltip>
+              {!!album.is_downloadable && (
+                <Tooltip title={allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}>
+                  <button
+                    onClick={toggleAll}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'rgba(255,255,255,0.55)',
+                      padding: '8px 16px',
+                      fontSize: 11,
+                      letterSpacing: '0.15em',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      fontFamily: 'Inter, sans-serif',
+                      fontWeight: 500,
+                      transition: 'all 0.2s',
+                      borderRadius: 2,
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.5)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                  >
+                    {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+                  </button>
+                </Tooltip>
+              )}
 
               {userHasAccess && (
                 <Tooltip title="Copier le lien de partage">
@@ -264,11 +261,13 @@ export function SharePage() {
                   </Button>
                 </Tooltip>
               )}
-              <a href={`/api/albums/share/${token}/download`} download style={{ textDecoration: 'none' }}>
-                <Button icon={<DownloadOutlined />} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff' }}>
-                  Tout télécharger
-                </Button>
-              </a>
+              {!!album.is_downloadable && (
+                <a href={`/api/albums/share/${token}/download`} download style={{ textDecoration: 'none' }}>
+                  <Button icon={<DownloadOutlined />} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff' }}>
+                    Tout télécharger
+                  </Button>
+                </a>
+              )}
             </div>
           )}
         </div>
@@ -300,6 +299,7 @@ export function SharePage() {
                 isSelected={selected.has(photo.share_token)}
                 onToggle={() => toggleSelect(photo.share_token)}
                 accentColor={accentColor}
+                downloadable={!!data?.album?.is_downloadable}
               />
             ))}
           </div>
@@ -310,7 +310,9 @@ export function SharePage() {
       {photos.length > 0 && selected.size === 0 && (
         <div style={{ textAlign: 'center', padding: '48px 24px 80px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <p style={{ color: 'rgba(255,255,255,0.18)', fontSize: 12, letterSpacing: '0.12em', margin: 0, fontFamily: 'Inter, sans-serif' }}>
-            Cliquez sur le carré pour sélectionner · Survolez pour apercevoir ou télécharger
+            {album.is_downloadable
+              ? 'Cliquez sur le carré pour sélectionner · Survolez pour apercevoir ou télécharger'
+              : 'Survolez une photo pour l\'apercevoir'}
           </p>
         </div>
       )}
@@ -346,15 +348,17 @@ export function SharePage() {
           >
             <CloseOutlined style={{ fontSize: 11 }} /> Annuler
           </button>
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            loading={downloading}
-            onClick={downloadSelected}
-            style={{ borderRadius: 6 }}
-          >
-            Télécharger la sélection
-          </Button>
+          {!!album.is_downloadable && (
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              loading={downloading}
+              onClick={downloadSelected}
+              style={{ borderRadius: 6 }}
+            >
+              Télécharger la sélection
+            </Button>
+          )}
         </div>
       )}
     </div>

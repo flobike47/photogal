@@ -3,8 +3,12 @@ export interface Album {
   name: string;
   description: string;
   cover_photo_id: string | null;
+  cover_url?: string | null;
   share_token: string;
   is_public: number;
+  is_downloadable: number;
+  is_portfolio: number;
+  has_password?: number;
   created_at: string;
   updated_at: string;
   photo_count?: number;

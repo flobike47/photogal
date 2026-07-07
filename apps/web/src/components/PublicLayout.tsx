@@ -7,6 +7,12 @@ import { apiClient } from '../api/client';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
+function ensureUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `https://${url}`;
+}
+
 export function PublicLayout() {
   const { config } = useSiteConfigStore();
   const { isAuthenticated, isAdmin, setAuth, logout } = useAuthStore();
@@ -146,7 +152,7 @@ export function PublicLayout() {
         {/* Desktop nav */}
         {!isMobile && (
           <nav style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
-            <Link to="/" style={navLinkStyle(location.pathname === '/')}>Galeries</Link>
+            <Link to="/" style={navLinkStyle(location.pathname === '/')}>Accueil</Link>
             <Link to="/contact" style={navLinkStyle(location.pathname === '/contact')}>Contact</Link>
             {isAuthenticated && isAdmin && (
               <Link to="/admin" style={navLinkStyle(false)}>Admin</Link>
@@ -208,7 +214,7 @@ export function PublicLayout() {
           }}
         >
           {[
-            { to: '/', label: 'Galeries' },
+            { to: '/', label: 'Accueil' },
             { to: '/contact', label: 'Contact' },
             ...(isAuthenticated && isAdmin ? [{ to: '/admin', label: 'Admin' }] : []),
           ].map(({ to, label }) => (
@@ -251,16 +257,18 @@ export function PublicLayout() {
               {config.site_name}
             </span>
             {config.site_description && (
-              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: 300, lineHeight: 1.65, margin: 0 }}>
-                {config.site_description}
-              </p>
+              <div
+                dangerouslySetInnerHTML={{ __html: config.site_description }}
+                style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: 300, lineHeight: 1.65, margin: 0 }}
+                className="pg-rich-text"
+              />
             )}
           </div>
 
           <div>
             <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 16px', fontFamily: 'Inter, sans-serif' }}>Navigation</p>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Link to="/" className="pg-nav-link" style={{ fontSize: 12 }}>Galeries</Link>
+              <Link to="/" className="pg-nav-link" style={{ fontSize: 12 }}>Accueil</Link>
               <Link to="/contact" className="pg-nav-link" style={{ fontSize: 12 }}>Contact</Link>
             </nav>
           </div>
@@ -269,10 +277,10 @@ export function PublicLayout() {
             <div>
               <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 16px', fontFamily: 'Inter, sans-serif' }}>Réseaux</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {config.social_instagram && <a href={config.social_instagram} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Instagram</a>}
-                {config.social_facebook && <a href={config.social_facebook} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Facebook</a>}
-                {config.social_pinterest && <a href={config.social_pinterest} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Pinterest</a>}
-                {config.social_website && <a href={config.social_website} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Site web</a>}
+                {config.social_instagram && <a href={ensureUrl(config.social_instagram)} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Instagram</a>}
+                {config.social_facebook && <a href={ensureUrl(config.social_facebook)} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Facebook</a>}
+                {config.social_pinterest && <a href={ensureUrl(config.social_pinterest)} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Pinterest</a>}
+                {config.social_website && <a href={ensureUrl(config.social_website)} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Site web</a>}
               </div>
             </div>
           )}
@@ -286,9 +294,11 @@ export function PublicLayout() {
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: isMobile ? '16px 24px' : '16px 48px' }}>
-          <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            {config.footer_text}
-          </span>
+          <div
+            dangerouslySetInnerHTML={{ __html: config.footer_text }}
+            style={{ color: 'rgba(255,255,255,0.18)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}
+            className="pg-rich-text"
+          />
         </div>
       </footer>
     </div>

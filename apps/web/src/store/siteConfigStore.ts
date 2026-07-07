@@ -19,6 +19,12 @@ export interface SiteConfig {
   social_website: string;
   heading_font: string;
   site_theme: string;
+  cta_button_text: string;
+  portfolio_title: string;
+  portfolio_cta_text: string;
+  contact_page_title: string;
+  contact_bg_color: string;
+  contact_bg_url: string;
   [key: string]: string;
 }
 
@@ -47,6 +53,12 @@ const defaultConfig: SiteConfig = {
   social_website: '',
   heading_font: 'cormorant',
   site_theme: 'dark',
+  cta_button_text: 'Découvrir les galeries',
+  portfolio_title: 'Portfolio',
+  portfolio_cta_text: 'Réserver une séance →',
+  contact_page_title: 'Parlons de votre projet',
+  contact_bg_color: '',
+  contact_bg_url: '',
 };
 
 export const useSiteConfigStore = create<SiteConfigState>((set) => ({

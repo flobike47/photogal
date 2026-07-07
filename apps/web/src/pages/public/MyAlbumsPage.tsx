@@ -62,9 +62,9 @@ export function MyAlbumsPage() {
                 className="pg-album-card"
                 style={{ aspectRatio: '3/4' }}
               >
-                {album.cover_photo_id ? (
+                {(album.cover_url || album.cover_photo_id) ? (
                   <img
-                    src={`/uploads/photos/${album.id}/${album.cover_photo_id}`}
+                    src={album.cover_url || `/uploads/photos/${album.id}/${album.cover_photo_id}`}
                     alt={album.name}
                   />
                 ) : (

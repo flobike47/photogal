@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
+import { useWindowWidth } from '../../hooks/useWindowWidth';
+import { htmlToInline } from '../../utils/html';
 import { apiClient } from '../../api/client';
 
 interface FormState {
@@ -14,6 +16,7 @@ export function ContactPage() {
   const [errors, setErrors] = useState<Partial<FormState>>({});
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const formRef = useRef<HTMLFormElement>(null);
+  const isMobile = useWindowWidth() < 768;
 
   const validate = (): boolean => {
     const errs: Partial<FormState> = {};
@@ -42,33 +45,47 @@ export function ContactPage() {
     if (errors[field]) setErrors((er) => ({ ...er, [field]: undefined }));
   };
 
+  const leftPanelStyle: React.CSSProperties = {
+    width: isMobile ? '100%' : '40%',
+    minWidth: isMobile ? 'unset' : 280,
+    padding: isMobile ? '100px 28px 48px' : '120px 64px 80px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
+    background: config.contact_bg_color || '#0a0a0a',
+  };
+
+  if (config.contact_bg_url) {
+    leftPanelStyle.backgroundImage = `url(${config.contact_bg_url})`;
+    leftPanelStyle.backgroundSize = 'cover';
+    leftPanelStyle.backgroundPosition = 'center';
+  }
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex' }}>
-      {/* ── Left: dark info panel ── */}
-      <div
-        style={{
-          width: '40%',
-          minWidth: 280,
-          background: '#0a0a0a',
-          padding: '120px 64px 80px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+      {/* ── Left: info panel ── */}
+      <div style={leftPanelStyle}>
+        {config.contact_bg_url && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 0 }} />
+        )}
+        <div style={{ position: 'relative', zIndex: 1 }}>
           <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', margin: '0 0 20px', fontFamily: 'Inter, sans-serif' }}>
             Nous écrire
           </p>
           <h1
             className="pg-heading"
-            style={{ color: '#fff', fontSize: 'clamp(36px, 4vw, 60px)', fontWeight: 300, margin: '0 0 40px', letterSpacing: '-0.01em', lineHeight: 1.1 }}
-          >
-            Parlons de votre projet
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, fontWeight: 300, lineHeight: 1.75, margin: '0 0 56px', maxWidth: 320 }}>
-            {config.site_description}. Répondons à vos questions et construisons quelque chose ensemble.
-          </p>
+            style={{ color: '#fff', fontSize: isMobile ? 'clamp(28px, 8vw, 48px)' : 'clamp(36px, 4vw, 60px)', fontWeight: 300, margin: '0 0 40px', letterSpacing: '-0.01em', lineHeight: 1.1 }}
+            dangerouslySetInnerHTML={{ __html: htmlToInline(config.contact_page_title) || 'Parlons de votre projet' }}
+          />
+          {config.site_description && (
+            <div
+              dangerouslySetInnerHTML={{ __html: config.site_description }}
+              style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, fontWeight: 300, lineHeight: 1.75, margin: '0 0 56px', maxWidth: 320 }}
+              className="pg-rich-text"
+            />
+          )}
 
           {config.contact_email && (
             <div>
@@ -85,13 +102,14 @@ export function ContactPage() {
           )}
         </div>
 
-        {/* Bottom decoration */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 64 }}>
-          <div style={{ width: 40, height: 1, background: 'rgba(255,255,255,0.15)' }} />
-          <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>
-            {config.site_name}
-          </span>
-        </div>
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 64, position: 'relative', zIndex: 1 }}>
+            <div style={{ width: 40, height: 1, background: 'rgba(255,255,255,0.15)' }} />
+            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>
+              {config.site_name}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── Right: form panel ── */}
@@ -99,7 +117,7 @@ export function ContactPage() {
         style={{
           flex: 1,
           background: '#fafafa',
-          padding: '120px 80px 80px',
+          padding: isMobile ? '48px 28px 64px' : '120px 80px 80px',
           display: 'flex',
           alignItems: 'flex-start',
         }}
