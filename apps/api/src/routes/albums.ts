@@ -117,7 +117,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
       const album = db.prepare('SELECT * FROM albums WHERE id = ?').get(request.params.id) as Album | undefined;
       if (!album) return reply.status(404).send({ error: 'Album introuvable' });
       if (!album.password_hash) return reply.status(400).send({ error: 'Cet album n\'a pas de mot de passe' });
-      const ok = await bcrypt.compare(request.body.password, album.password_hash);
+      const ok = await bcrypt.compare(request.body.password.trim(), album.password_hash);
       if (!ok) return reply.status(401).send({ error: 'Mot de passe incorrect' });
       return { share_token: album.share_token };
     },
@@ -229,7 +229,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
     const id = nanoid();
     const share_token = nanoid(12);
     const now = new Date().toISOString();
-    const password_hash = password ? await bcrypt.hash(password, 10) : null;
+    const password_hash = password?.trim() ? await bcrypt.hash(password.trim(), 10) : null;
 
     db.prepare(
       `INSERT INTO albums (id, name, description, share_token, is_public, is_downloadable, is_portfolio, password_hash, created_at, updated_at)
@@ -255,8 +255,8 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
 
     // password='' or null removes the password; password=string sets a new one; undefined leaves unchanged
     let newPasswordHash: string | null | undefined = undefined;
-    if (password === '' || password === null) newPasswordHash = null;
-    else if (password) newPasswordHash = await bcrypt.hash(password, 10);
+    if (password === null || (typeof password === 'string' && password.trim() === '')) newPasswordHash = null;
+    else if (password) newPasswordHash = await bcrypt.hash(password.trim(), 10);
 
     db.prepare(
       `UPDATE albums SET
