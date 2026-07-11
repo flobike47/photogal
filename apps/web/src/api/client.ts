@@ -9,7 +9,9 @@ export const apiClient = axios.create({
 apiClient.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const url: string = err.config?.url ?? '';
+    const isPublicUnlock = url.includes('/unlock');
+    if (err.response?.status === 401 && !isPublicUnlock) {
       useAuthStore.getState().logout();
       window.location.href = '/admin/login';
     }
