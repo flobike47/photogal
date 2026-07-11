@@ -155,7 +155,7 @@ export function HomePage() {
           padding: '100px 32px 80px',
           position: 'relative',
           background: config.hero_image_url
-            ? `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.72)), url(${config.hero_image_url}) center/cover no-repeat fixed`
+            ? `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.72)), url(${config.hero_image_url}) center/cover no-repeat`
             : 'radial-gradient(ellipse 80% 60% at 50% 40%, #1a1a2e 0%, #0a0a0a 70%)',
         }}
       >
