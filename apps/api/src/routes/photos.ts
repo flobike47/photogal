@@ -66,6 +66,7 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const stream = await download(tKey);
+    reply.raw.on('close', () => stream.destroy());
     return reply
       .header('Content-Type', 'image/jpeg')
       .header('Cache-Control', 'public, max-age=31536000, immutable')
@@ -78,6 +79,7 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     if (!photo) return reply.status(404).send({ error: 'Photo introuvable' });
 
     const stream = await download(photoKey(photo));
+    reply.raw.on('close', () => stream.destroy());
     return reply
       .header('Content-Type', photo.mime_type)
       .header('Cache-Control', 'public, max-age=3600')
@@ -92,6 +94,7 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     if (!photo) return reply.status(404).send({ error: 'Photo introuvable' });
 
     const stream = await download(photoKey(photo));
+    reply.raw.on('close', () => stream.destroy());
     return reply
       .header('Content-Type', photo.mime_type)
       .header('Content-Disposition', `attachment; filename="${encodeURIComponent(photo.original_name)}"`)

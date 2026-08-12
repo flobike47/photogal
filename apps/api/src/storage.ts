@@ -16,7 +16,11 @@ export const s3 = new S3Client({
     accessKeyId: config.s3AccessKey,
     secretAccessKey: config.s3SecretKey,
   },
-  forcePathStyle: true, // required for MinIO
+  forcePathStyle: true,
+  requestHandler: {
+    requestTimeout: 10_000,   // abandon si MinIO ne répond pas en 10s
+    connectionTimeout: 5_000, // abandon si la connexion TCP prend plus de 5s
+  },
 });
 
 const BUCKET = config.s3Bucket;

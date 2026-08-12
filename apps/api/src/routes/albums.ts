@@ -173,6 +173,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
 
     const archive = new ZipArchive({ zlib: { level: 1 } });
     archive.pipe(reply.raw);
+    reply.raw.on('close', () => archive.abort());
 
     const seen = new Set<string>();
     for (const photo of photos) {
