@@ -23,6 +23,7 @@ export interface Photo {
   mime_type: string;
   size: number;
   share_token: string;
+  sort_order: number;
   created_at: string;
 }
 

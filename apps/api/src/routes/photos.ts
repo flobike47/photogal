@@ -137,6 +137,18 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     await archive.finalize();
   });
 
+  // Admin: reorder photos within an album
+  app.put<{ Body: { albumId: string; photoIds: string[] } }>('/reorder', { preHandler: [authenticate] }, async (request, reply) => {
+    const { albumId, photoIds } = request.body;
+    if (!albumId || !Array.isArray(photoIds)) return reply.status(400).send({ error: 'Paramètres invalides' });
+    const update = db.prepare('UPDATE photos SET sort_order = ? WHERE id = ? AND album_id = ?');
+    const updateAll = db.transaction(() => {
+      photoIds.forEach((photoId, index) => update.run(index + 1, photoId, albumId));
+    });
+    updateAll();
+    return { ok: true };
+  });
+
   // Admin: upload one or more photos to an album
   app.post<{ Params: { albumId: string } }>('/upload/:albumId', { preHandler: [authenticate] }, async (request, reply) => {
     const album = db.prepare('SELECT id FROM albums WHERE id = ?').get(request.params.albumId);
@@ -144,6 +156,12 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
 
     const uploaded: Photo[] = [];
     const parts = request.files();
+
+    // Determine starting sort_order (append after existing photos)
+    const { maxOrder } = db.prepare(
+      'SELECT COALESCE(MAX(sort_order), 0) as maxOrder FROM photos WHERE album_id = ?'
+    ).get(request.params.albumId) as { maxOrder: number };
+    let nextOrder = maxOrder + 1;
 
     for await (const part of parts) {
       if (!ALLOWED_MIME_TYPES.has(part.mimetype)) {
@@ -169,9 +187,9 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
       await upload(`photos/${request.params.albumId}/${filename}`, buffer, part.mimetype);
 
       db.prepare(
-        `INSERT INTO photos (id, album_id, filename, original_name, mime_type, size, share_token, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(id, request.params.albumId, filename, part.filename, part.mimetype, buffer.length, nanoid(12), now);
+        `INSERT INTO photos (id, album_id, filename, original_name, mime_type, size, share_token, sort_order, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(id, request.params.albumId, filename, part.filename, part.mimetype, buffer.length, nanoid(12), nextOrder++, now);
 
       const photo = db.prepare('SELECT * FROM photos WHERE id = ?').get(id) as Photo;
       uploaded.push(photo);
@@ -198,7 +216,7 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Querystring: { albumId?: string } }>('/', { preHandler: [authenticate] }, async (request) => {
     const { albumId } = request.query;
     const photos = albumId
-      ? (db.prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY created_at ASC').all(albumId) as Photo[])
+      ? (db.prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order ASC, created_at ASC').all(albumId) as Photo[])
       : (db.prepare('SELECT * FROM photos ORDER BY created_at DESC').all() as Photo[]);
     return { photos };
   });

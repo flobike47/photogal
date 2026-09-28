@@ -148,7 +148,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
     if (!album) return reply.status(404).send({ error: 'Album introuvable' });
 
     const photos = db
-      .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY created_at ASC')
+      .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order ASC, created_at ASC')
       .all(album.id) as Photo[];
     return { album: { ...album, allowed_emails: getAlbumEmails(album.id) }, photos };
   });
@@ -162,7 +162,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
     if (!album.is_downloadable) return reply.status(403).send({ error: 'Téléchargement désactivé pour cet album' });
 
     const photos = db
-      .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY created_at ASC')
+      .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order ASC, created_at ASC')
       .all(album.id) as Photo[];
 
     reply.hijack();
@@ -325,7 +325,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
     if (!album) return reply.status(404).send({ error: 'Album introuvable' });
 
     const photos = db
-      .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY created_at ASC')
+      .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order ASC, created_at ASC')
       .all(request.params.id) as Photo[];
     return { photos };
   });
