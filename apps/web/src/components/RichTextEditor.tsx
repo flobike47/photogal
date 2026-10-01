@@ -19,7 +19,8 @@ export function RichTextEditor({ value, onChange }: Props) {
   const editor = useEditor({
     extensions: [StarterKit],
     content: toEditorContent(value),
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    // Un éditeur vidé produit « <p></p> » : on renvoie '' pour que le champ soit vraiment vide
+    onUpdate: ({ editor }) => onChange(editor.isEmpty ? '' : editor.getHTML()),
   });
 
   useEffect(() => {

@@ -20,6 +20,7 @@ import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 
 const app = Fastify({
+  trustProxy: config.trustProxy,
   logger: {
     transport:
       config.nodeEnv === 'development'

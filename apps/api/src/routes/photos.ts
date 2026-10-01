@@ -77,9 +77,10 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
   // Public: download a photo by its share token
   app.get<{ Params: { shareToken: string } }>('/download/:shareToken', async (request, reply) => {
     const photo = db
-      .prepare('SELECT * FROM photos WHERE share_token = ?')
-      .get(request.params.shareToken) as Photo | undefined;
+      .prepare(`SELECT p.*, a.is_downloadable FROM photos p JOIN albums a ON a.id = p.album_id WHERE p.share_token = ?`)
+      .get(request.params.shareToken) as (Photo & { is_downloadable: number }) | undefined;
     if (!photo) return reply.status(404).send({ error: 'Photo introuvable' });
+    if (!photo.is_downloadable) return reply.status(403).send({ error: 'Téléchargement désactivé pour cet album' });
 
     const stream = await download(photoKey(photo));
     reply.raw.on('close', () => stream.destroy());
@@ -100,10 +101,12 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const placeholders = shareTokens.map(() => '?').join(',');
-    const photos = db
-      .prepare(`SELECT * FROM photos WHERE share_token IN (${placeholders})`)
-      .all(...shareTokens) as Photo[];
-    if (photos.length === 0) return reply.status(404).send({ error: 'Photos introuvables' });
+    const found = db
+      .prepare(`SELECT p.*, a.is_downloadable FROM photos p JOIN albums a ON a.id = p.album_id WHERE p.share_token IN (${placeholders})`)
+      .all(...shareTokens) as (Photo & { is_downloadable: number })[];
+    if (found.length === 0) return reply.status(404).send({ error: 'Photos introuvables' });
+    const photos = found.filter((p) => p.is_downloadable);
+    if (photos.length === 0) return reply.status(403).send({ error: 'Téléchargement désactivé pour cet album' });
 
     reply.hijack();
     reply.raw.writeHead(200, {

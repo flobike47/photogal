@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 import { reseed } from '../helpers/reseed';
 import { ALLOWED_VISITOR, SESSION_COOKIE, signVisitorToken } from '../helpers/auth';
-import { fixture } from '../helpers/files';
+import { fixture, zipEntries } from '../helpers/files';
 import { readFileSync } from 'fs';
 
 test.afterAll(reseed);
@@ -111,26 +111,58 @@ test.describe('S5 — Cycle de vie des ressources', () => {
   });
 });
 
-test.describe('Sécurité — bugs connus', () => {
-  test('la galerie publique n\'expose ni le hash du mot de passe ni les emails autorisés', async ({ request }) => {
-    test.fail(true, 'Bug connu : /share/:token renvoie SELECT * (password_hash) et allowed_emails');
-    const { album } = await (await request.get('/api/albums/share/demo-prive-mdp')).json();
-    expect(album).not.toHaveProperty('password_hash');
-    const shared = (await (await request.get('/api/albums/share/demo-prive-emails')).json()).album;
-    expect(shared).not.toHaveProperty('allowed_emails');
+test.describe('S6 — Données sensibles et droits de téléchargement', () => {
+  test('aucune réponse d\'album n\'expose le hash du mot de passe', async ({ request, adminApi }) => {
+    const responses = [
+      await request.get('/api/albums/public'),
+      await request.get('/api/albums/listing'),
+      await request.get('/api/albums/share/demo-prive-mdp'),
+      await request.get('/api/albums/my', { headers: { cookie: `${SESSION_COOKIE}=${signVisitorToken(ALLOWED_VISITOR)}` } }),
+      await adminApi.get('/api/albums'),
+      await adminApi.get('/api/albums/album-prive-mdp'),
+      await adminApi.put('/api/albums/album-prive-mdp', { data: { description: 'x' } }),
+    ];
+    for (const res of responses) {
+      expect(res.ok(), res.url()).toBeTruthy();
+      expect(await res.text(), res.url()).not.toContain('password_hash');
+    }
+    const admin = await (await adminApi.get('/api/albums/album-prive-mdp')).json();
+    expect(admin.has_password).toBe(1);
+  });
+
+  test('la galerie publique ne révèle pas les emails autorisés, seulement l\'accès du visiteur', async ({ request }) => {
+    const anonymous = (await (await request.get('/api/albums/share/demo-prive-emails')).json()).album;
+    expect(anonymous).not.toHaveProperty('allowed_emails');
+    expect(anonymous.viewer_has_access).toBe(false);
+
+    const asAllowed = (await (await request.get('/api/albums/share/demo-prive-emails', {
+      headers: { cookie: `${SESSION_COOKIE}=${signVisitorToken(ALLOWED_VISITOR)}` },
+    })).json()).album;
+    expect(asAllowed.viewer_has_access).toBe(true);
   });
 
   test('une photo d\'un album non téléchargeable ne peut pas être téléchargée', async ({ request }) => {
-    test.fail(true, 'Bug connu : is_downloadable n\'est vérifié que sur le ZIP de l\'album');
     const { photos } = await (await request.get('/api/albums/share/demo-non-telechargeable')).json();
     const res = await request.get(`/api/photos/download/${photos[0].share_token}`);
     expect(res.status()).toBe(403);
   });
 
   test('le ZIP de sélection refuse les photos d\'un album non téléchargeable', async ({ request }) => {
-    test.fail(true, 'Bug connu : /photos/download-zip ne vérifie pas is_downloadable');
     const { photos } = await (await request.get('/api/albums/share/demo-non-telechargeable')).json();
     const res = await request.post('/api/photos/download-zip', { data: { shareTokens: [photos[0].share_token] } });
     expect(res.status()).toBe(403);
+  });
+
+  test('un ZIP mêlant les deux types d\'albums ne contient que les photos téléchargeables', async ({ request }) => {
+    const locked = (await (await request.get('/api/albums/share/demo-non-telechargeable')).json()).photos[0];
+    const open = (await (await request.get('/api/albums/share/demo-mariage')).json()).photos[0];
+    const res = await request.post('/api/photos/download-zip', { data: { shareTokens: [locked.share_token, open.share_token] } });
+    expect(res.status()).toBe(200);
+    expect(zipEntries(await res.body())).toEqual([open.original_name]);
+  });
+
+  test('l\'aperçu (original) reste disponible pour un album non téléchargeable', async ({ request }) => {
+    const { photos } = await (await request.get('/api/albums/share/demo-non-telechargeable')).json();
+    expect((await request.get(`/api/photos/${photos[0].id}/original`)).status()).toBe(200);
   });
 });

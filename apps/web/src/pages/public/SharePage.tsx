@@ -6,7 +6,6 @@ import { useParams, Link } from 'react-router-dom';
 import { DownloadOutlined, EyeOutlined, CheckOutlined, CloseOutlined, LinkOutlined } from '@ant-design/icons';
 import { apiClient } from '../../api/client';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
-import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 import type { Album, Photo } from '../../types';
@@ -95,7 +94,6 @@ function PhotoCard({
 export function SharePage() {
   const { token } = useParams<{ token: string }>();
   const { config } = useSiteConfigStore();
-  const { email: userEmail } = useAuthStore();
   const accentColor = config.primary_color || '#1677ff';
   const [msgApi, contextHolder] = message.useMessage();
   const isMobile = useWindowWidth() < 768;
@@ -175,9 +173,8 @@ export function SharePage() {
 
   const { album } = data;
 
-  const userHasAccess = !!userEmail && (album.allowed_emails ?? [])
-    .map((e) => e.toLowerCase())
-    .includes(userEmail.toLowerCase());
+  // Calculé par l'API à partir de la session : la liste des emails n'est pas exposée
+  const userHasAccess = !!album.viewer_has_access;
 
   const copyShareLink = () => {
     void navigator.clipboard.writeText(window.location.href);

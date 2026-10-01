@@ -35,9 +35,11 @@ test.describe('A26 — Changement du mot de passe admin', () => {
   });
 
   test('un nouveau mot de passe trop court est signalé dans le formulaire', async ({ page }) => {
-    test.fail(true, 'Bug connu : le front accepte 6 caractères, l\'API en exige 8 et répond « Mot de passe actuel incorrect »');
+    let called = false;
+    page.on('request', (r) => { if (r.url().endsWith('/api/auth/password')) called = true; });
     await fillPasswordForm(page, ADMIN_PASSWORD, 'abc1234');
-    await expect(page.getByText(/8 caractères/)).toBeVisible();
+    await expect(page.getByText('Au moins 8 caractères')).toBeVisible();
+    expect(called).toBe(false);
   });
 
   test('un changement réussi invalide les sessions et seul le nouveau mot de passe fonctionne', async ({ page, adminApi, playwright, baseURL }) => {

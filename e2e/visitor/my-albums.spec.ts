@@ -57,7 +57,6 @@ test.describe('U3 — Déconnexion visiteur', () => {
   });
 
   test('une session visiteur expirée reste sur le site public', async ({ page, context, baseURL }) => {
-    test.fail(true, 'Bug connu : l\'intercepteur 401 redirige tout le monde vers /admin/login');
     await context.addCookies([{ name: SESSION_COOKIE, value: signVisitorToken(ALLOWED_VISITOR, -60), url: baseURL! }]);
     await context.addInitScript(() => {
       sessionStorage.setItem('photogal-auth', JSON.stringify({

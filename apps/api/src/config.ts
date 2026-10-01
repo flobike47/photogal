@@ -22,6 +22,8 @@ export const config = {
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
   nodeEnv: process.env.NODE_ENV ?? 'development',
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  // Derrière un reverse proxy (nginx…) : lire l'IP client dans X-Forwarded-For (limite d'essais /unlock)
+  trustProxy: process.env.TRUST_PROXY === 'true',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   s3Endpoint: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
   s3Region: process.env.S3_REGION ?? 'us-east-1',

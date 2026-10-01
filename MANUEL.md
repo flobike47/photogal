@@ -136,7 +136,9 @@ Cliquer sur l'icône **crayon**. Les mêmes champs sont modifiables, plus :
 Pour le mot de passe en mode édition :
 - Laisser vide → mot de passe inchangé
 - Saisir un nouveau texte → remplace le mot de passe existant
-- Effacer entièrement → supprime la protection par mot de passe
+- Cocher **Retirer le mot de passe** → supprime la protection (case affichée seulement si l'album en a un)
+
+> Après 10 mots de passe erronés, un visiteur est bloqué 15 minutes sur cet album.
 
 #### Copier le lien de partage
 Cliquer sur l'icône **lien** pour copier l'URL de la galerie dans le presse-papiers.

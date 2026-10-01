@@ -23,6 +23,32 @@ function setAlbumEmails(albumId: string, emails: string[]) {
   }
 }
 
+// Ne jamais renvoyer le hash du mot de passe : on expose seulement s'il existe
+function withoutSecrets<T extends { password_hash?: string | null }>(album: T): Omit<T, 'password_hash'> & { has_password: number } {
+  const { password_hash, ...rest } = album;
+  return { ...rest, has_password: password_hash ? 1 : 0 };
+}
+
+// Échecs de déverrouillage par (IP, album) : limite le brute-force du mot de passe
+const UNLOCK_MAX_FAILURES = 10;
+const UNLOCK_WINDOW_MS = 15 * 60 * 1000;
+const unlockFailures = new Map<string, { count: number; resetAt: number }>();
+
+function unlockBlocked(key: string): boolean {
+  const entry = unlockFailures.get(key);
+  if (!entry) return false;
+  if (Date.now() > entry.resetAt) { unlockFailures.delete(key); return false; }
+  return entry.count >= UNLOCK_MAX_FAILURES;
+}
+
+function recordUnlockFailure(key: string): void {
+  const now = Date.now();
+  for (const [k, v] of unlockFailures) if (now > v.resetAt) unlockFailures.delete(k);
+  const entry = unlockFailures.get(key);
+  if (entry && now <= entry.resetAt) entry.count++;
+  else unlockFailures.set(key, { count: 1, resetAt: now + UNLOCK_WINDOW_MS });
+}
+
 function uniqueName(seen: Set<string>, original: string): string {
   if (!seen.has(original)) { seen.add(original); return original; }
   const ext = extname(original);
@@ -47,7 +73,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
          ORDER BY a.created_at DESC`,
       )
       .all() as Album[];
-    return { albums };
+    return { albums: albums.map(withoutSecrets) };
   });
 
   // Public: all non-portfolio albums (public ones fully listed, private ones shown with lock)
@@ -113,12 +139,29 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
   // Public: unlock a private album with password → returns share_token
   app.post<{ Params: { id: string }; Body: { password: string } }>(
     '/:id/unlock',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['password'],
+          properties: { password: { type: 'string', minLength: 1, maxLength: 200 } },
+        },
+      },
+    },
     async (request, reply) => {
       const album = db.prepare('SELECT * FROM albums WHERE id = ?').get(request.params.id) as Album | undefined;
       if (!album) return reply.status(404).send({ error: 'Album introuvable' });
       if (!album.password_hash) return reply.status(400).send({ error: 'Cet album n\'a pas de mot de passe' });
+
+      const limitKey = `${request.ip}|${album.id}`;
+      if (unlockBlocked(limitKey)) {
+        return reply.status(429).send({ error: 'Trop de tentatives. Réessayez dans quelques minutes.' });
+      }
       const ok = await bcrypt.compare(request.body.password.trim(), album.password_hash);
-      if (!ok) return reply.status(401).send({ error: 'Mot de passe incorrect' });
+      if (!ok) {
+        recordUnlockFailure(limitKey);
+        return reply.status(401).send({ error: 'Mot de passe incorrect' });
+      }
       return { share_token: album.share_token };
     },
   );
@@ -137,7 +180,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
          ORDER BY a.created_at DESC`,
       )
       .all(email) as Album[];
-    return { albums };
+    return { albums: albums.map(withoutSecrets) };
   });
 
   // Public: get album by share token
@@ -150,7 +193,13 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
     const photos = db
       .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order ASC, created_at ASC')
       .all(album.id) as Photo[];
-    return { album: { ...album, allowed_emails: getAlbumEmails(album.id) }, photos };
+    // La liste des emails autorisés reste privée : on indique seulement si le visiteur en fait partie
+    let viewer_has_access = false;
+    try {
+      await request.jwtVerify();
+      viewer_has_access = getAlbumEmails(album.id).includes(request.user.email.trim().toLowerCase());
+    } catch { /* visiteur anonyme */ }
+    return { album: { ...withoutSecrets(album), viewer_has_access }, photos };
   });
 
   // Public: download all photos in album as zip
@@ -197,14 +246,14 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
          ORDER BY a.created_at DESC`,
       )
       .all() as Album[];
-    return { albums };
+    return { albums: albums.map(withoutSecrets) };
   });
 
   // Admin: get single album (includes allowed_emails)
   app.get<{ Params: { id: string } }>('/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const album = db.prepare('SELECT * FROM albums WHERE id = ?').get(request.params.id) as Album | undefined;
     if (!album) return reply.status(404).send({ error: 'Album introuvable' });
-    return { ...album, allowed_emails: getAlbumEmails(album.id) };
+    return { ...withoutSecrets(album), allowed_emails: getAlbumEmails(album.id) };
   });
 
   // Admin: create album
@@ -240,7 +289,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
     setAlbumEmails(id, allowed_emails);
 
     const album = db.prepare('SELECT * FROM albums WHERE id = ?').get(id) as Album;
-    return { ...album, allowed_emails: getAlbumEmails(id) };
+    return { ...withoutSecrets(album), allowed_emails: getAlbumEmails(id) };
   });
 
   // Admin: update album
@@ -288,7 +337,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const updated = db.prepare('SELECT * FROM albums WHERE id = ?').get(request.params.id) as Album;
-    return { ...updated, allowed_emails: getAlbumEmails(request.params.id) };
+    return { ...withoutSecrets(updated), allowed_emails: getAlbumEmails(request.params.id) };
   });
 
   // Admin: delete album
@@ -303,6 +352,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
       await remove(`photos/${photo.album_id}/${photo.filename}`);
       await remove(`photos/${photo.album_id}/thumbs/${photo.id}.jpg`);
     }
+    if (album.cover_url) await remove(`covers/${album.id}`);
 
     return reply.status(204).send();
   });

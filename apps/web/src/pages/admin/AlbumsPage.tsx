@@ -14,6 +14,7 @@ import {
   Tag,
   Tooltip,
   Badge,
+  Checkbox,
 } from 'antd';
 import {
   PlusOutlined,
@@ -41,7 +42,8 @@ interface AlbumForm {
   is_public: boolean;
   is_downloadable: boolean;
   is_portfolio: boolean;
-  password?: string;
+  password?: string | null;
+  remove_password?: boolean;
   allowed_emails: string[];
 }
 
@@ -139,6 +141,7 @@ export function AlbumsPage() {
       is_downloadable: data.is_downloadable !== 0,
       is_portfolio: data.is_portfolio === 1,
       password: '',
+      remove_password: false,
       allowed_emails: data.allowed_emails ?? [],
     });
     setModalOpen(true);
@@ -150,8 +153,11 @@ export function AlbumsPage() {
     msg.success('Lien copié dans le presse-papiers');
   };
 
-  const onSubmit = (values: AlbumForm) => {
+  const onSubmit = ({ remove_password, ...values }: AlbumForm) => {
     if (editing) {
+      // Champ vide = mot de passe inchangé ; la case « Retirer » est le seul moyen de le supprimer
+      if (remove_password) values.password = null;
+      else if (!values.password?.trim()) delete values.password;
       updateMutation.mutate({ id: editing.id, values });
     } else {
       createMutation.mutate(values);
@@ -313,10 +319,18 @@ export function AlbumsPage() {
           <Form.Item
             name="password"
             label="Mot de passe d'accès (albums privés)"
-            extra={editing ? "Laissez vide pour ne pas modifier · saisissez un texte pour changer · effacez tout pour supprimer" : "Optionnel — permet l'accès depuis la page d'accueil sans connexion"}
+            extra={editing ? 'Laissez vide pour conserver le mot de passe actuel' : "Optionnel — permet l'accès depuis la page d'accueil sans connexion"}
           >
-            <Input.Password placeholder="Laisser vide = pas de mot de passe" autoComplete="new-password" />
+            <Input.Password
+              placeholder={editing?.has_password ? 'Inchangé' : 'Laisser vide = pas de mot de passe'}
+              autoComplete="new-password"
+            />
           </Form.Item>
+          {!!editing?.has_password && (
+            <Form.Item name="remove_password" valuePropName="checked" style={{ marginTop: -12 }}>
+              <Checkbox>Retirer le mot de passe</Checkbox>
+            </Form.Item>
+          )}
           <Form.Item
             name="allowed_emails"
             label="Accès par email"

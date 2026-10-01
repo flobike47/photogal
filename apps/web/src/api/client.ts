@@ -13,7 +13,8 @@ apiClient.interceptors.response.use(
     const isPublicUnlock = url.includes('/unlock');
     if (err.response?.status === 401 && !isPublicUnlock) {
       useAuthStore.getState().logout();
-      window.location.href = '/admin/login';
+      // Seul l'admin est renvoyé vers le login ; un visiteur dont la session expire reste sur le site
+      if (window.location.pathname.startsWith('/admin')) window.location.href = '/admin/login';
     }
     return Promise.reject(err);
   },

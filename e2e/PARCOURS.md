@@ -22,7 +22,7 @@ Ce document est la référence des tests de non-régression end-to-end (Playwrig
 | V10 | Album non téléchargeable | Ni cases, ni boutons de téléchargement, texte d'aide adapté. ZIP de l'album en 403 | `download` |
 | V11 | Album vide | État vide, aucune action | `gallery` |
 | V12 | Lien invalide | « Album introuvable » et retour à l'accueil | `gallery` |
-| V13 | Album privé avec mot de passe | Modale, Annuler. Mauvais mot de passe → erreur. Bon mot de passe → galerie. Espaces ignorés, Entrée valide | `private-album` |
+| V13 | Album privé avec mot de passe | Modale, Annuler. Mauvais mot de passe → erreur. Bon mot de passe → galerie. Espaces ignorés, Entrée valide. Sans mot de passe → 400. Après 10 échecs → 429, même avec le bon mot de passe | `private-album` |
 | V14 | Couverture personnalisée | La carte utilise `/api/albums/:id/cover` | `home` |
 | V15 | Orientation EXIF | Les miniatures EXIF 1/3/6/8 sont en portrait | `gallery` |
 | V16 | Contact | Titre, email et fond de la config. Validation (champs requis, email). Confirmation après envoi, et le message arrive dans l'admin. L'API répond 400 sur un email invalide | `contact` |
@@ -33,7 +33,7 @@ Ce document est la référence des tests de non-régression end-to-end (Playwrig
 |---|---|---|
 | U1 | Mes albums | Un email autorisé voit « Mes albums » (Famille Martin) et l'ouvre. Un autre email ne voit pas la section |
 | U2 | Copier le lien | Bouton visible et presse-papiers correct pour un email autorisé, absent sinon |
-| U3 | Déconnexion | « × » fait disparaître la section, puis `/api/albums/my` répond 401 |
+| U3 | Déconnexion | « × » fait disparaître la section, puis `/api/albums/my` répond 401. Une session expirée laisse le visiteur sur le site public |
 | U4 | Pas d'admin | Pas de lien Admin, `/admin` → login, API admin en 403 |
 
 ## Administrateur (`admin/`)
@@ -45,7 +45,7 @@ Ce document est la référence des tests de non-régression end-to-end (Playwrig
 | A3 | Déconnexion | Retour au login, `/admin` redemande la connexion | `auth` |
 | A4 | Liste des albums | 9 albums, nombre de photos, Public/Privé, liens vers les photos | `albums` |
 | A5 | Créer un album | Nom requis. Options (public, téléchargeable, portfolio). Mot de passe utilisable. Emails normalisés. Bonne section de l'accueil | `albums` |
-| A6 | Modifier un album | Renommer et passer en portfolio. La modale reprend les valeurs existantes | `albums` |
+| A6 | Modifier un album | Renommer et passer en portfolio. La modale reprend les valeurs existantes. Un mot de passe laissé vide est conservé. Il peut être changé, ou retiré via la case dédiée | `albums` |
 | A7 | Couverture indépendante | Upload → aperçu, `cover_url`, carte de l'accueil | `albums` |
 | A8 | Copier le lien | Presse-papiers = `/share/<token>` | `albums` |
 | A9 | Régénérer le lien | Confirmation. Ancien lien → introuvable, nouveau copié et fonctionnel | `albums` |
@@ -60,12 +60,12 @@ Ce document est la référence des tests de non-régression end-to-end (Playwrig
 | A18 | Messages | Ordre, statuts et compteurs. Lire → tiroir complet et marqué lu (badges mis à jour). Clic sur une ligne. Suppression depuis le tiroir et depuis la table | `messages` |
 | A19 | Identité | Nom du site (sider, header public, login), email de contact, footer | `settings` |
 | A20 | Apparence | Thème clair, couleur principale (appliquée aux cases de sélection), police, image hero | `settings` |
-| A21 | Contenu | Titre du hero, titre de la page contact. Bio vidée → section À propos masquée | `settings` |
+| A21 | Contenu | Titre du hero, titre de la page contact. Bio vidée → section À propos masquée (l'éditeur vide enregistre `''`) | `settings` |
 | A22 | Réseaux | `facebook.com/…` → lien `https://` dans le footer | `settings` |
 | A23 | Fond contact | Couleur et image appliquées au panneau de `/contact` | `settings` |
 | A24 | Logo | Upload → logo dans les headers public et admin (PNG servi) | `settings` |
 | A25 | Stockage | Espace utilisé (Mo), limite de 10 Go et message explicatif | `settings` |
-| A26 | Mot de passe admin | Mauvais mot de passe actuel, confirmation différente (sans appel API). Succès → anciennes sessions en 401, seul le nouveau mot de passe fonctionne | `security` |
+| A26 | Mot de passe admin | Mauvais mot de passe actuel, confirmation différente, moins de 8 caractères (ces deux derniers sans appel API). Succès → anciennes sessions en 401, seul le nouveau mot de passe fonctionne | `security` |
 
 ## Contrat API (`api/contract.spec.ts`)
 
@@ -76,22 +76,13 @@ Ce document est la référence des tests de non-régression end-to-end (Playwrig
 | S3 | `PUT /api/config` ignore les clés inconnues. Un type d'asset inconnu → 400 |
 | S4 | `/api/health` ok, deep link du SPA servi, route API inconnue → 404 |
 | S5 | Une photo supprimée n'est plus servie. Régénérer un token invalide l'ancien. Le réordonnancement ignore les photos d'un autre album |
+| S6 | Aucune réponse d'album ne contient `password_hash` (`has_password` à la place). La galerie publique n'expose pas les emails autorisés, seulement `viewer_has_access`. Une photo d'un album non téléchargeable → 403 en téléchargement unitaire et en ZIP (un ZIP mixte ne garde que les photos autorisées). L'aperçu (`/original`) reste disponible |
 
 ## Bugs connus (`test.fail`)
 
-Ces tests décrivent le comportement **attendu**. Tant que le bug existe, ils échouent et la suite reste verte. Une fois le bug corrigé, Playwright les signale en « passed unexpectedly » : il faut alors retirer la ligne `test.fail(...)`.
+Quand un bug est identifié mais pas encore corrigé, on écrit le test du comportement **attendu** et on le marque `test.fail('Bug connu : …')`. La suite reste verte tant que le bug existe. Quand il est corrigé, Playwright signale « passed unexpectedly » : on retire alors l'annotation.
 
-| Test | Bug | Constat |
-|---|---|---|
-| A6 · `albums` | Modifier un album protégé sans toucher au mot de passe **supprime** le mot de passe | La modale envoie `password: ""`. Après l'édition, `/unlock` répond 400 « pas de mot de passe » |
-| A21 · `settings` | Vider la bio ne masque pas la section À propos | L'éditeur enregistre `<p></p>` |
-| A26 · `security` | Mot de passe de 6 ou 7 caractères accepté par le formulaire | L'API exige 8 caractères et l'erreur affichée est « Mot de passe actuel incorrect » |
-| U3 · `my-albums` | Une session visiteur expirée redirige vers `/admin/login` | Intercepteur 401 global dans `api/client.ts` |
-| V13 · `private-album` | `/unlock` sans body → 500 | Pas de schéma de validation |
-| V13 · `private-album` | Pas de rate limit sur `/unlock` | 12 essais faux → 12 × 401 |
-| Sécurité · `contract` | `/share/:token` expose `password_hash` et `allowed_emails` | `SELECT *` |
-| Sécurité · `contract` | Photo d'un album non téléchargeable téléchargeable via `/photos/download/:token` | 200 |
-| Sécurité · `contract` | Idem via `/photos/download-zip` | 200 |
+**Aucun bug connu ouvert.** Les 9 bugs identifiés lors de la mise en place de la suite (fuite de `password_hash` et des emails, contournement de `is_downloadable`, `/unlock` sans validation ni limite d'essais, mot de passe d'album supprimé à l'édition, bio vide, longueur du mot de passe admin, redirection 401 des visiteurs) ont été corrigés. Leurs tests tournent désormais normalement.
 
 Non testé : `apps/web/src/pages/public/MyAlbumsPage.tsx` n'est branchée sur aucune route et utilise l'URL obsolète `/uploads/...`. C'est du code mort.
 

@@ -234,8 +234,9 @@ export function SettingsPage() {
       await apiClient.put('/auth/password', { currentPassword: values.currentPassword, newPassword: values.newPassword });
       msg.success('Mot de passe modifié');
       passwordForm.resetFields();
-    } catch {
-      msg.error('Mot de passe actuel incorrect');
+    } catch (err) {
+      const error = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
+      msg.error(error ?? 'Erreur lors du changement de mot de passe');
     } finally {
       setSaving((s) => ({ ...s, password: false }));
     }
@@ -606,7 +607,7 @@ export function SettingsPage() {
             <Form.Item name="currentPassword" label="Mot de passe actuel" rules={[{ required: true }]}>
               <Input.Password prefix={<LockOutlined />} />
             </Form.Item>
-            <Form.Item name="newPassword" label="Nouveau mot de passe" rules={[{ required: true, min: 6 }]}>
+            <Form.Item name="newPassword" label="Nouveau mot de passe" rules={[{ required: true }, { min: 8, message: 'Au moins 8 caractères' }]}>
               <Input.Password prefix={<LockOutlined />} />
             </Form.Item>
             <Form.Item name="confirmPassword" label="Confirmer" rules={[{ required: true }]}>

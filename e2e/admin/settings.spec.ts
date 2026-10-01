@@ -119,7 +119,6 @@ test.describe('A21 — Contenu', () => {
   });
 
   test('vider la biographie masque la section À propos', async ({ page }) => {
-    test.fail(true, 'Bug connu : l\'éditeur vidé enregistre "<p></p>", une chaîne non vide, donc la section reste affichée');
     await openTab(page, 'Contenu');
     await replaceRichText(page, 6, '');
     await save(page, 'Sauvegarder');

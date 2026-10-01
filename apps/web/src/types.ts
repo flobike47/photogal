@@ -13,6 +13,7 @@ export interface Album {
   updated_at: string;
   photo_count?: number;
   allowed_emails?: string[];
+  viewer_has_access?: boolean;
 }
 
 export interface Photo {

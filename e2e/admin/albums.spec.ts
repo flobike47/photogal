@@ -124,7 +124,6 @@ test.describe('A6 — Modifier un album', () => {
   });
 
   test('modifier un album protégé sans toucher au mot de passe le conserve', async ({ page, request }) => {
-    test.fail(true, 'Bug connu : la modale envoie password: "" et l\'API supprime alors le mot de passe');
     await page.goto('/admin/albums');
     await rowAction(page, 'Séance privée', 'edit').click();
     await modal(page).getByLabel('Description').fill('Description modifiée');
@@ -133,6 +132,27 @@ test.describe('A6 — Modifier un album', () => {
 
     const unlock = await request.post('/api/albums/album-prive-mdp/unlock', { data: { password: 'test1234' } });
     expect(unlock.status()).toBe(200);
+  });
+
+  test('changer puis retirer le mot de passe d\'un album', async ({ page, request }) => {
+    const unlock = (password: string) => request.post('/api/albums/album-prive-mdp/unlock', { data: { password } });
+    await page.goto('/admin/albums');
+    await rowAction(page, 'Séance privée', 'edit').click();
+    await expect(modal(page).getByPlaceholder('Inchangé')).toBeVisible();
+    await modal(page).getByLabel('Mot de passe d\'accès').fill('nouveau-mdp');
+    await modal(page).getByRole('button', { name: 'Mettre à jour' }).click();
+    await expect(page.getByText('Album mis à jour')).toBeVisible();
+    expect((await unlock('test1234')).status()).toBe(401);
+    expect((await unlock('nouveau-mdp')).status()).toBe(200);
+
+    await rowAction(page, 'Séance privée', 'edit').click();
+    await modal(page).getByRole('checkbox', { name: 'Retirer le mot de passe' }).check();
+    await modal(page).getByRole('button', { name: 'Mettre à jour' }).click();
+    await expect(page.getByText('Album mis à jour').last()).toBeVisible();
+    expect((await unlock('nouveau-mdp')).status()).toBe(400); // plus de mot de passe
+
+    await page.goto('/');
+    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'Séance privée' })).toContainText('Accès sur invitation');
   });
 });
 
