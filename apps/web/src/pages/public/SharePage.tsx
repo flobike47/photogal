@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 import type { Album, Photo } from '../../types';
+import { thumbUrl } from '../../utils/thumb';
 
 dayjs.locale('fr');
 
@@ -32,7 +33,7 @@ function PhotoCard({
   downloadable: boolean;
 }) {
   const [visible, setVisible] = useState(false);
-  const src = `/api/photos/${photo.id}/thumb`;
+  const src = thumbUrl(photo.id);
   const fullSrc = `/api/photos/${photo.id}/original`;
 
   return (

@@ -32,7 +32,13 @@ Les liens de partage ne changent pas d'un seed à l'autre :
 | Famille Martin | `/share/demo-prive-emails` | Accès par email (`client@example.com`, plus `SEED_USER_EMAIL` si défini) |
 | Épreuves | `/share/demo-non-telechargeable` | Téléchargement désactivé |
 | Événement | `/share/demo-couverture` | Couverture uploadée à part |
+| Orientation EXIF | `/share/demo-orientation` | Photos de téléphone tournées : les 4 flèches doivent pointer vers le haut |
 | Album vide | `/share/demo-vide` | États vides |
 
 Pour tester « Mes albums » avec ton compte Google, ajoute `SEED_USER_EMAIL=ton.email@gmail.com` dans le `.env` et relance le seed. Le compte doit être différent de `ADMIN_EMAIL`, sinon tu es connecté en admin.
 
+## Formats d'image
+- Les **HEIC/HEIF** (iPhone) sont convertis en JPEG à l'upload. Le sharp précompilé ne décode pas le HEVC, donc la conversion passe par `heic-decode` (WASM).
+- Les miniatures appliquent l'orientation EXIF. Après un changement du pipeline de miniatures :
+  - lancer `npm run generate-thumbs --workspace @photogal/api -- --force` ;
+  - incrémenter `THUMB_VERSION` dans `apps/web/src/utils/thumb.ts`, car les miniatures sont en cache « immutable ».

@@ -2,10 +2,10 @@ import type { FastifyPluginAsync } from 'fastify';
 import { nanoid } from 'nanoid';
 import { extname, basename } from 'path';
 import { ZipArchive } from 'archiver';
-import sharp from 'sharp';
 import { db } from '../db.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { upload, download, downloadBuffer, remove, exists } from '../storage.js';
+import { isHeic, heicToJpeg, thumbKey, generateAndUploadThumb } from '../images.js';
 import { config } from '../config.js';
 import type { Photo } from '../types.js';
 
@@ -30,18 +30,6 @@ function photoKey(photo: Photo): string {
   return `photos/${photo.album_id}/${photo.filename}`;
 }
 
-export function thumbKey(photo: Photo): string {
-  return `photos/${photo.album_id}/thumbs/${photo.id}.jpg`;
-}
-
-export async function generateAndUploadThumb(srcBuffer: Buffer, tKey: string): Promise<void> {
-  const thumbBuffer = await sharp(srcBuffer)
-    .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 80 })
-    .toBuffer();
-  await upload(tKey, thumbBuffer, 'image/jpeg');
-}
-
 export const photoRoutes: FastifyPluginAsync = async (app) => {
   // Public: thumbnail (generates on-demand for legacy photos)
   app.get<{ Params: { id: string } }>('/:id/thumb', async (request, reply) => {
@@ -55,7 +43,7 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
       if (!await exists(pKey)) return reply.status(404).send({ error: 'Fichier introuvable' });
       try {
         const srcBuffer = await downloadBuffer(pKey);
-        await generateAndUploadThumb(srcBuffer, tKey);
+        await generateAndUploadThumb(srcBuffer, tKey, photo.mime_type);
       } catch {
         const stream = await download(pKey);
         return reply
@@ -163,18 +151,38 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
     ).get(request.params.albumId) as { maxOrder: number };
     let nextOrder = maxOrder + 1;
 
+    const skipped: string[] = [];
+
     for await (const part of parts) {
-      if (!ALLOWED_MIME_TYPES.has(part.mimetype)) {
+      const heic = isHeic(part.mimetype, part.filename);
+      if (!heic && !ALLOWED_MIME_TYPES.has(part.mimetype)) {
         await part.toBuffer();
+        skipped.push(part.filename);
         continue;
       }
 
-      const ext = extname(part.filename) || '.jpg';
+      let buffer = await part.toBuffer();
+      let mimeType = part.mimetype;
+      let originalName = part.filename;
+      let ext = extname(part.filename) || '.jpg';
+
+      // HEIC (iPhone) : illisible par la plupart des navigateurs → converti en JPEG
+      if (heic) {
+        try {
+          buffer = await heicToJpeg(buffer);
+        } catch (err) {
+          request.log.warn({ err, filename: part.filename }, 'HEIC conversion failed');
+          skipped.push(part.filename);
+          continue;
+        }
+        mimeType = 'image/jpeg';
+        ext = '.jpg';
+        originalName = `${basename(part.filename, extname(part.filename))}.jpg`;
+      }
+
       const id = nanoid();
       const filename = `${id}${ext}`;
       const now = new Date().toISOString();
-
-      const buffer = await part.toBuffer();
 
       // Check storage limit
       if (config.storageLimitGb) {
@@ -184,20 +192,20 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      await upload(`photos/${request.params.albumId}/${filename}`, buffer, part.mimetype);
+      await upload(`photos/${request.params.albumId}/${filename}`, buffer, mimeType);
 
       db.prepare(
         `INSERT INTO photos (id, album_id, filename, original_name, mime_type, size, share_token, sort_order, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(id, request.params.albumId, filename, part.filename, part.mimetype, buffer.length, nanoid(12), nextOrder++, now);
+      ).run(id, request.params.albumId, filename, originalName, mimeType, buffer.length, nanoid(12), nextOrder++, now);
 
       const photo = db.prepare('SELECT * FROM photos WHERE id = ?').get(id) as Photo;
       uploaded.push(photo);
 
-      generateAndUploadThumb(buffer, thumbKey(photo)).catch(() => {});
+      generateAndUploadThumb(buffer, thumbKey(photo), mimeType).catch(() => {});
     }
 
-    return reply.status(201).send({ photos: uploaded });
+    return reply.status(201).send({ photos: uploaded, skipped });
   });
 
   // Admin: delete a photo

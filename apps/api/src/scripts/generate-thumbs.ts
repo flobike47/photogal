@@ -1,21 +1,18 @@
 import Database from 'better-sqlite3';
-import sharp from 'sharp';
 import { config } from '../config.js';
-import { ensureBucket, upload, downloadBuffer, exists } from '../storage.js';
+import { ensureBucket, downloadBuffer, exists } from '../storage.js';
+import { generateAndUploadThumb, thumbKey } from '../images.js';
+import type { Photo } from '../types.js';
+
+// --force : régénère aussi les miniatures existantes (ex. après un changement de pipeline)
+const force = process.argv.includes('--force');
 
 const dbPath = process.env.DB_PATH ?? config.dbPath;
 const db = new Database(dbPath);
 
-interface Photo {
-  id: string;
-  album_id: string;
-  filename: string;
-  mime_type: string;
-}
-
 await ensureBucket();
 
-const photos = db.prepare('SELECT id, album_id, filename, mime_type FROM photos ORDER BY created_at ASC').all() as Photo[];
+const photos = db.prepare('SELECT * FROM photos ORDER BY created_at ASC').all() as Photo[];
 console.log(`Found ${photos.length} photos to process.`);
 
 let generated = 0;
@@ -23,9 +20,9 @@ let skipped = 0;
 let failed = 0;
 
 for (const photo of photos) {
-  const tKey = `photos/${photo.album_id}/thumbs/${photo.id}.jpg`;
+  const tKey = thumbKey(photo);
 
-  if (await exists(tKey)) {
+  if (!force && await exists(tKey)) {
     skipped++;
     continue;
   }
@@ -34,11 +31,7 @@ for (const photo of photos) {
 
   try {
     const srcBuffer = await downloadBuffer(srcKey);
-    const thumbBuffer = await sharp(srcBuffer)
-      .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 80 })
-      .toBuffer();
-    await upload(tKey, thumbBuffer, 'image/jpeg');
+    await generateAndUploadThumb(srcBuffer, tKey, photo.mime_type);
     generated++;
     process.stdout.write(`\r  Generated: ${generated} | Skipped: ${skipped} | Failed: ${failed}`);
   } catch (err) {

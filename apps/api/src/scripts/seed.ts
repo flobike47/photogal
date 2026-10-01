@@ -66,6 +66,17 @@ async function generateLogo(text: string): Promise<Buffer> {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
+// Simule une photo de téléphone : on stocke les pixels « couchés » comme le capteur,
+// avec le tag EXIF qui indique comment les redresser à l'affichage.
+const ROTATION_FOR_ORIENTATION: Record<number, number> = { 1: 0, 3: 180, 6: 270, 8: 90 };
+async function withExifOrientation(upright: Buffer, orientation: number): Promise<Buffer> {
+  return sharp(upright)
+    .rotate(ROTATION_FOR_ORIENTATION[orientation])
+    .withMetadata({ orientation })
+    .jpeg({ quality: 82 })
+    .toBuffer();
+}
+
 const ORIENTATIONS = [
   { width: 2000, height: 1333 }, // paysage 3:2
   { width: 1333, height: 2000 }, // portrait 2:3
@@ -111,7 +122,7 @@ console.log(`[seed] ${keys.length} objet(s) supprimé(s) du bucket`);
 // On vide les tables au lieu de supprimer le fichier : une API déjà lancée garde
 // son handle SQLite ouvert et continuerait sinon à lire l'ancien fichier supprimé.
 const { db, defaultConfig } = await import('../db.js');
-const { generateAndUploadThumb, thumbKey } = await import('../routes/photos.js');
+const { generateAndUploadThumb, thumbKey } = await import('../images.js');
 db.transaction(() => {
   for (const table of ['photos', 'album_access', 'albums', 'contact_messages', 'admin_users', 'site_config']) {
     db.prepare(`DELETE FROM ${table}`).run();
@@ -163,6 +174,7 @@ interface AlbumSeed {
   password?: string;
   allowedEmails?: string[];
   customCover?: boolean;
+  exifOrientations?: number[]; // une photo par valeur : pixels tournés + tag EXIF qui les redresse
 }
 
 const albums: AlbumSeed[] = [
@@ -173,6 +185,7 @@ const albums: AlbumSeed[] = [
   { id: 'album-prive-emails', name: 'Famille Martin (accès email)', description: 'Visible dans « Mes albums » pour les emails autorisés', shareToken: 'demo-prive-emails', hue: 190, photoCount: 6, isPublic: false, allowedEmails: ['client@example.com', ...(process.env.SEED_USER_EMAIL ? [process.env.SEED_USER_EMAIL] : [])] },
   { id: 'album-non-telechargeable', name: 'Épreuves (non téléchargeable)', description: 'Téléchargement désactivé', shareToken: 'demo-non-telechargeable', hue: 50, photoCount: 5, isDownloadable: false },
   { id: 'album-couverture', name: 'Événement (couverture perso)', description: 'Couverture uploadée indépendamment des photos', shareToken: 'demo-couverture', hue: 100, photoCount: 4, customCover: true },
+  { id: 'album-orientation', name: 'Orientation EXIF', description: 'Toutes les flèches doivent pointer vers le haut', shareToken: 'demo-orientation', hue: 160, photoCount: 4, exifOrientations: [1, 3, 6, 8] },
   { id: 'album-vide', name: 'Album vide', description: 'Pour tester les états vides', shareToken: 'demo-vide', hue: 0, photoCount: 0 },
 ];
 
@@ -196,10 +209,16 @@ for (const [albumIndex, a] of albums.entries()) {
   const photos = await mapLimit(Array.from({ length: a.photoCount }, (_, i) => i), 4, async (i) => {
     const { width, height } = ORIENTATIONS[i % ORIENTATIONS.length];
     const number = String(i + 1).padStart(2, '0');
-    const buffer = await generateImage({
-      width, height, hue: (a.hue + i * 7) % 360, seed: albumIndex * 100 + i,
-      label: number, sublabel: `${a.name.split(' (')[0]} · ${width}×${height}`,
-    });
+    const orientation = a.exifOrientations?.[i];
+    const buffer = orientation
+      ? await withExifOrientation(await generateImage({
+          width: 1200, height: 1600, hue: (a.hue + i * 40) % 360, seed: albumIndex * 100 + i,
+          label: '↑ HAUT', sublabel: `EXIF orientation ${orientation}`,
+        }), orientation)
+      : await generateImage({
+          width, height, hue: (a.hue + i * 7) % 360, seed: albumIndex * 100 + i,
+          label: number, sublabel: `${a.name.split(' (')[0]} · ${width}×${height}`,
+        });
     const photo: Photo = {
       id: nanoid(),
       album_id: a.id,

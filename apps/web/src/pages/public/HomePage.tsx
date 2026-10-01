@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useWindowWidth } from '../../hooks/useWindowWidth';
 import { htmlToInline } from '../../utils/html';
 import type { Album } from '../../types';
+import { thumbUrl } from '../../utils/thumb';
 
 export function HomePage() {
   const { config } = useSiteConfigStore();
@@ -331,7 +332,7 @@ export function HomePage() {
             }}
           >
             {portfolioAlbums.map((album, i) => {
-              const coverSrc = album.cover_url || (album.cover_photo_id ? `/api/photos/${album.cover_photo_id.replace(/\.[^/.]+$/, '')}/thumb` : null);
+              const coverSrc = album.cover_url || (album.cover_photo_id ? thumbUrl(album.cover_photo_id.replace(/\.[^/.]+$/, '')) : null);
               return (
               <Link
                 key={album.id}
@@ -403,7 +404,7 @@ export function HomePage() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
               {listingAlbums.map((album, i) => {
-                const coverSrc = album.cover_url || (album.cover_photo_id ? `/api/photos/${album.cover_photo_id.replace(/\.[^/.]+$/, '')}/thumb` : null);
+                const coverSrc = album.cover_url || (album.cover_photo_id ? thumbUrl(album.cover_photo_id.replace(/\.[^/.]+$/, '')) : null);
                 const isPrivate = !album.share_token;
                 const hasPassword = !!album.has_password;
 
@@ -483,7 +484,7 @@ export function HomePage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
             {myAlbums.map((album, i) => {
-              const coverSrc = album.cover_url || (album.cover_photo_id ? `/api/photos/${album.cover_photo_id.replace(/\.[^/.]+$/, '')}/thumb` : null);
+              const coverSrc = album.cover_url || (album.cover_photo_id ? thumbUrl(album.cover_photo_id.replace(/\.[^/.]+$/, '')) : null);
               return (
               <Link key={album.id} to={`/share/${album.share_token}`} className="pg-album-card" style={{ aspectRatio: '3/4' }}>
                 {coverSrc ? (

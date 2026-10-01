@@ -44,6 +44,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import { apiClient } from '../../api/client';
 import type { Album, Photo } from '../../types';
+import { thumbUrl } from '../../utils/thumb';
 
 const { Title, Text } = Typography;
 
@@ -102,7 +103,7 @@ function SortablePhotoCard({ photo, isCover, onSetCover, onDelete, onCopyLink }:
         <HolderOutlined style={{ color: '#fff', fontSize: 14 }} />
       </div>
       <Image
-        src={`/api/photos/${photo.id}/thumb`}
+        src={thumbUrl(photo.id)}
         alt={photo.original_name}
         style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
       />
@@ -215,7 +216,7 @@ export function AlbumPhotosPage() {
     const formData = new FormData();
     formData.append('file', options.file as File);
     try {
-      await apiClient.post(`/photos/upload/${id}`, formData, {
+      const { data } = await apiClient.post<{ skipped?: string[] }>(`/photos/upload/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           if (e.total && options.onProgress) {
@@ -223,6 +224,9 @@ export function AlbumPhotosPage() {
           }
         },
       });
+      if (data.skipped?.length) {
+        msg.warning(`Fichier refusé : ${data.skipped.join(', ')}. Formats acceptés : JPEG, PNG, WebP, GIF, HEIC, AVIF, TIFF.`);
+      }
       options.onSuccess?.({});
       qc.invalidateQueries({ queryKey: ['admin-album-photos', id] });
       qc.invalidateQueries({ queryKey: ['admin-albums'] });
