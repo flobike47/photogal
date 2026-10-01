@@ -1,0 +1,27 @@
+# Infra locale pour le développement : MinIO seul.
+# L'API et le front tournent en local via `npm run dev` (hot reload).
+#   npm run dev:infra   → démarre MinIO
+#   npm run seed        → remet la DB et le bucket à zéro avec des données de test
+name: photogal-dev
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_dev:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"  # console MinIO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  minio_dev:

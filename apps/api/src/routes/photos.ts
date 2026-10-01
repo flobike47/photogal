@@ -30,11 +30,11 @@ function photoKey(photo: Photo): string {
   return `photos/${photo.album_id}/${photo.filename}`;
 }
 
-function thumbKey(photo: Photo): string {
+export function thumbKey(photo: Photo): string {
   return `photos/${photo.album_id}/thumbs/${photo.id}.jpg`;
 }
 
-async function generateAndUploadThumb(srcBuffer: Buffer, tKey: string): Promise<void> {
+export async function generateAndUploadThumb(srcBuffer: Buffer, tKey: string): Promise<void> {
   const thumbBuffer = await sharp(srcBuffer)
     .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
     .jpeg({ quality: 80 })

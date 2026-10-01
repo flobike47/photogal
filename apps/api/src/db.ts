@@ -62,7 +62,7 @@ db.exec(`
   );
 `);
 
-const defaultConfig: Record<string, string> = {
+export const defaultConfig: Record<string, string> = {
   site_name: 'PhotoGal',
   site_description: 'Partagez vos plus belles photos',
   primary_color: '#1677ff',
