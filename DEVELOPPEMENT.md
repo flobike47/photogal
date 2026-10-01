@@ -42,3 +42,11 @@ Pour tester « Mes albums » avec ton compte Google, ajoute `SEED_USER_EMAIL=ton
 - Les miniatures appliquent l'orientation EXIF. Après un changement du pipeline de miniatures :
   - lancer `npm run generate-thumbs --workspace @photogal/api -- --force` ;
   - incrémenter `THUMB_VERSION` dans `apps/web/src/utils/thumb.ts`, car les miniatures sont en cache « immutable ».
+
+## Tests de non-régression (Playwright)
+- `npm run test:e2e` lance toute la suite (~2 min 30) : desktop, plus mobile pour la navigation et la galerie. Prérequis : `npm run dev:infra`. Le serveur de dev est démarré automatiquement s'il ne tourne pas déjà.
+- `npm run test:e2e:ui` lance le mode interactif pour déboguer.
+- Le rapport HTML est dans `playwright-report/`.
+- Le seed est rejoué au démarrage et après chaque spec qui modifie des données. Ne pas utiliser l'interface en même temps que la suite tourne.
+- `e2e/PARCOURS.md` donne la liste des parcours, leurs critères d'acceptation et les bugs connus (tests en `test.fail`).
+- Installation initiale de Chromium pour Playwright : `npx playwright install chromium`.

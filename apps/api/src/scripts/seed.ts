@@ -249,7 +249,7 @@ for (const [albumIndex, a] of albums.entries()) {
     a.isDownloadable === false ? 0 : 1,
     a.isPortfolio ? 1 : 0,
     a.password ? await bcrypt.hash(a.password, 10) : null,
-    photos[0]?.id ?? null,
+    photos[0]?.filename ?? null, // convention du front : cover_photo_id = filename
     coverUrl,
     createdAt, createdAt,
   );

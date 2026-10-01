@@ -8,3 +8,9 @@ uploads
 .DS_Store
 .idea/
 .claude/
+
+# Tests e2e
+e2e/.fixtures/
+playwright-report/
+test-results/
+e2e/.auth/
