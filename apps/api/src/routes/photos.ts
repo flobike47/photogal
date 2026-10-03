@@ -1,11 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { nanoid } from 'nanoid';
 import { extname, basename } from 'path';
-import { ZipArchive } from 'archiver';
 import { db } from '../db.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { upload, download, downloadBuffer, remove, isNotFound } from '../storage.js';
-import { isHeic, heicToJpeg, thumbKey, generateAndUploadThumb } from '../images.js';
+import { isHeic, heicToJpeg, photoKey, thumbKey, generateAndUploadThumb } from '../images.js';
+import { sendZip } from '../zip.js';
 import { config } from '../config.js';
 import type { Readable } from 'stream';
 import type { Photo } from '../types.js';
@@ -15,21 +15,6 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/gif', 'image/heic', 'image/heif',
   'image/avif', 'image/tiff',
 ]);
-
-function uniqueName(seen: Set<string>, original: string): string {
-  if (!seen.has(original)) { seen.add(original); return original; }
-  const ext = extname(original);
-  const base = original.slice(0, -ext.length || undefined);
-  let i = 2;
-  let candidate = `${base}_${i}${ext}`;
-  while (seen.has(candidate)) { i++; candidate = `${base}_${i}${ext}`; }
-  seen.add(candidate);
-  return candidate;
-}
-
-function photoKey(photo: Photo): string {
-  return `photos/${photo.album_id}/${photo.filename}`;
-}
 
 export const photoRoutes: FastifyPluginAsync = async (app) => {
   // Public: thumbnail (generates on-demand for legacy photos)
@@ -97,42 +82,32 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
       .send(stream);
   });
 
-  // Public: download selected photos as zip
-  app.post<{ Body: { shareTokens: string[] } }>('/download-zip', async (request, reply) => {
-    const { shareTokens } = request.body;
-    if (!Array.isArray(shareTokens) || shareTokens.length === 0) {
-      return reply.status(400).send({ error: 'Aucune photo sélectionnée' });
-    }
-    if (shareTokens.length > 500) {
-      return reply.status(400).send({ error: 'Trop de photos' });
-    }
-
-    const placeholders = shareTokens.map(() => '?').join(',');
-    const found = db
-      .prepare(`SELECT p.*, a.is_downloadable FROM photos p JOIN albums a ON a.id = p.album_id WHERE p.share_token IN (${placeholders})`)
-      .all(...shareTokens) as (Photo & { is_downloadable: number })[];
-    if (found.length === 0) return reply.status(404).send({ error: 'Photos introuvables' });
-    const photos = found.filter((p) => p.is_downloadable);
-    if (photos.length === 0) return reply.status(403).send({ error: 'Téléchargement désactivé pour cet album' });
-
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'application/zip',
-      'Content-Disposition': 'attachment; filename="selection.zip"',
+  // Public: download selected photos as zip. Accepte aussi un formulaire HTML classique : le front
+  // le soumet pour que le navigateur télécharge le ZIP au fil de l'eau, sans tout charger en mémoire.
+  await app.register(async (scope) => {
+    scope.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_req, body, done) => {
+      done(null, { shareTokens: new URLSearchParams(body as string).getAll('shareTokens') });
     });
 
-    const archive = new ZipArchive({ zlib: { level: 1 } });
-    archive.pipe(reply.raw);
+    scope.post<{ Body: { shareTokens: string[] } }>('/download-zip', async (request, reply) => {
+      const { shareTokens } = request.body;
+      if (!Array.isArray(shareTokens) || shareTokens.length === 0) {
+        return reply.status(400).send({ error: 'Aucune photo sélectionnée' });
+      }
+      if (shareTokens.length > 500) {
+        return reply.status(400).send({ error: 'Trop de photos' });
+      }
 
-    const seen = new Set<string>();
-    for (const photo of photos) {
-      try {
-        const stream = await download(photoKey(photo));
-        archive.append(stream, { name: uniqueName(seen, basename(photo.original_name)) });
-      } catch { /* skip missing */ }
-    }
+      const placeholders = shareTokens.map(() => '?').join(',');
+      const found = db
+        .prepare(`SELECT p.*, a.is_downloadable FROM photos p JOIN albums a ON a.id = p.album_id WHERE p.share_token IN (${placeholders})`)
+        .all(...shareTokens) as (Photo & { is_downloadable: number })[];
+      if (found.length === 0) return reply.status(404).send({ error: 'Photos introuvables' });
+      const photos = found.filter((p) => p.is_downloadable);
+      if (photos.length === 0) return reply.status(403).send({ error: 'Téléchargement désactivé pour cet album' });
 
-    await archive.finalize();
+      await sendZip(reply, 'selection.zip', photos, request.log);
+    });
   });
 
   // Admin: reorder photos within an album

@@ -16,7 +16,7 @@ Ce document est la référence des tests de non-régression end-to-end (Playwrig
 | V4 | Navigation mobile | Le burger ouvre le menu, un lien navigue et le referme, Galerie défile jusqu'aux albums | `navigation` |
 | V5 | Galerie | Titre, date, nombre de photos, description. Ordre `sort_order`. Miniatures en JPEG chargées. Retour aux galeries | `gallery` |
 | V6 | Aperçu | Le clic ouvre l'original en lightbox, → passe à la suivante, Échap ferme | `gallery` |
-| V7 | Sélection | Cocher et décocher, compteur, Tout sélectionner/désélectionner, Annuler. Le ZIP de la sélection contient exactement les photos choisies | `download` |
+| V7 | Sélection | Cocher et décocher, compteur, Tout sélectionner/désélectionner, Annuler. Le ZIP de la sélection contient exactement les photos choisies ; tout sélectionner donne le ZIP de l'album complet | `download` |
 | V8 | Tout télécharger | ZIP des 40 photos avec leurs noms d'origine | `download` |
 | V9 | Photo unitaire | Bouton au survol → JPEG nommé `IMG_01.jpg` | `download` |
 | V10 | Album non téléchargeable | Ni cases, ni boutons de téléchargement, texte d'aide adapté. ZIP de l'album en 403 | `download` |

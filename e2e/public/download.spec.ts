@@ -43,6 +43,15 @@ test.describe('V7 — Sélection de photos', () => {
     expect(download.suggestedFilename()).toBe('selection.zip');
     expect(zipEntries(await readDownload(download)).sort()).toEqual(['IMG_01.jpg', 'IMG_02.jpg']);
   });
+
+  test('tout sélectionner puis télécharger donne le ZIP de l\'album complet (sans limite de nombre)', async ({ page }) => {
+    await page.getByRole('button', { name: 'Tout sélectionner' }).click();
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Télécharger la sélection' }).click();
+    const download = await downloadPromise;
+    expect(decodeURIComponent(download.suggestedFilename())).toBe('Mariage Julie & Thomas.zip');
+    expect(zipEntries(await readDownload(download))).toHaveLength(40);
+  });
 });
 
 test.describe('V8 — Tout télécharger', () => {

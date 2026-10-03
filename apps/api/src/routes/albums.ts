@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { nanoid } from 'nanoid';
-import { extname, basename } from 'path';
-import { ZipArchive } from 'archiver';
+import { sendZip } from '../zip.js';
 import bcrypt from 'bcryptjs';
 import { db } from '../db.js';
 import { authenticate } from '../middleware/authenticate.js';
@@ -47,17 +46,6 @@ function recordUnlockFailure(key: string): void {
   const entry = unlockFailures.get(key);
   if (entry && now <= entry.resetAt) entry.count++;
   else unlockFailures.set(key, { count: 1, resetAt: now + UNLOCK_WINDOW_MS });
-}
-
-function uniqueName(seen: Set<string>, original: string): string {
-  if (!seen.has(original)) { seen.add(original); return original; }
-  const ext = extname(original);
-  const base = original.slice(0, -ext.length || undefined);
-  let i = 2;
-  let candidate = `${base}_${i}${ext}`;
-  while (seen.has(candidate)) { i++; candidate = `${base}_${i}${ext}`; }
-  seen.add(candidate);
-  return candidate;
 }
 
 export const albumRoutes: FastifyPluginAsync = async (app) => {
@@ -214,25 +202,7 @@ export const albumRoutes: FastifyPluginAsync = async (app) => {
       .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order ASC, created_at ASC')
       .all(album.id) as Photo[];
 
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(album.name)}.zip"`,
-    });
-
-    const archive = new ZipArchive({ zlib: { level: 1 } });
-    archive.pipe(reply.raw);
-    reply.raw.on('close', () => archive.abort());
-
-    const seen = new Set<string>();
-    for (const photo of photos) {
-      try {
-        const stream = await download(`photos/${photo.album_id}/${photo.filename}`);
-        archive.append(stream, { name: uniqueName(seen, basename(photo.original_name)) });
-      } catch { /* skip missing */ }
-    }
-
-    await archive.finalize();
+    await sendZip(reply, `${album.name}.zip`, photos, request.log);
   });
 
   // Admin: list all albums
