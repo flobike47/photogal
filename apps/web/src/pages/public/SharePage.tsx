@@ -13,6 +13,10 @@ import { thumbUrl } from '../../utils/thumb';
 
 dayjs.locale('fr');
 
+const DOWNLOAD_FRAME = 'pg-download';
+// Même limite que l'API (POST /photos/download-zip)
+const MAX_SELECTION = 500;
+
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
   return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
@@ -99,7 +103,6 @@ export function SharePage() {
   const isMobile = useWindowWidth() < 768;
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [downloading, setDownloading] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['shared-album', token],
@@ -127,21 +130,36 @@ export function SharePage() {
 
   const clearSelection = () => setSelected(new Set());
 
-  const downloadSelected = async () => {
+  // Formulaire classique plutôt qu'un appel axios : le navigateur affiche le téléchargement tout de suite
+  // et l'écrit au fil de l'eau, au lieu de tout charger en mémoire avant de proposer l'enregistrement.
+  // Il vise une iframe cachée : une éventuelle erreur ne remplace pas la page.
+  const startDownload = (method: 'GET' | 'POST', action: string, shareTokens: Iterable<string> = []) => {
+    const form = document.createElement('form');
+    form.method = method;
+    form.action = action;
+    form.target = DOWNLOAD_FRAME;
+    for (const shareToken of shareTokens) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'shareTokens';
+      input.value = shareToken;
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+    msgApi.success('Téléchargement lancé');
+  };
+
+  const downloadSelected = () => {
     if (selected.size === 0) return;
-    setDownloading(true);
-    try {
-      const res = await apiClient.post('/photos/download-zip', { shareTokens: [...selected] }, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data as Blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'selection.zip';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch { /* silent */ }
-    finally { setDownloading(false); }
+    // Tout l'album : le ZIP de l'album n'a pas de limite de nombre de photos
+    if (allSelected) return startDownload('GET', `/api/albums/share/${token}/download`);
+    if (selected.size > MAX_SELECTION) {
+      msgApi.warning(`Vous pouvez télécharger ${MAX_SELECTION} photos au maximum par sélection. Utilisez « Tout télécharger » pour l'album complet.`);
+      return;
+    }
+    startDownload('POST', '/api/photos/download-zip', selected);
   };
 
   if (isLoading) {
@@ -184,6 +202,7 @@ export function SharePage() {
   return (
     <div style={{ background: '#0a0a0a', minHeight: '100vh' }}>
       {contextHolder}
+      <iframe name={DOWNLOAD_FRAME} title="Téléchargement" style={{ display: 'none' }} />
       {/* ── Album header ── */}
       <div style={{ padding: isMobile ? '100px 20px 40px' : '120px 64px 64px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <Link
@@ -350,7 +369,6 @@ export function SharePage() {
             <Button
               type="primary"
               icon={<DownloadOutlined />}
-              loading={downloading}
               onClick={downloadSelected}
               style={{ borderRadius: 6 }}
             >

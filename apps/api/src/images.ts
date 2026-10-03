@@ -89,6 +89,10 @@ export function heicToJpeg(buffer: Buffer, quality = 92): Promise<Buffer> {
   return imageLimit(() => convertHeic(buffer, quality));
 }
 
+export function photoKey(photo: Photo): string {
+  return `photos/${photo.album_id}/${photo.filename}`;
+}
+
 export function thumbKey(photo: Photo): string {
   return `photos/${photo.album_id}/thumbs/${photo.id}.jpg`;
 }
