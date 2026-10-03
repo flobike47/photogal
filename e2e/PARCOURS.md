@@ -52,6 +52,7 @@ Ce document est la référence des tests de non-régression end-to-end (Playwrig
 | A10 | Supprimer un album | Confirmation ou annulation. Liste, lien, original et miniature en 404 | `albums` |
 | A11 | Photos d'un album | Nom, description, compteur, ordre. État vide. Album inexistant. Fil d'Ariane | `photos` |
 | A12 | Upload | JPEG ajouté avec miniature. EXIF 6 → miniature en portrait. HEIC → JPEG 1280×854 | `photos` |
+| A12b | Upload en masse | 30 photos d'un coup : bandeau « Envoi des photos — x / 30 » avec barre de progression, au plus 3 requêtes simultanées, grille rechargée par lots (≤ 3 fois), 30 miniatures servies | `photos` |
 | A13 | Fichier refusé | `.txt` listé dans `skipped`, avertissement, rien d'ajouté | `photos` |
 | A14 | Couverture depuis une photo | Tag « Couverture » (seed puis changement), carte du portfolio mise à jour | `photos` |
 | A15 | Réordonner | Le drag & drop persiste après rechargement et se voit sur la galerie publique | `photos` |

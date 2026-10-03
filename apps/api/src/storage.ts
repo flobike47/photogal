@@ -6,6 +6,7 @@ import {
   HeadObjectCommand,
   CreateBucketCommand,
 } from '@aws-sdk/client-s3';
+import { Agent } from 'http';
 import type { Readable } from 'stream';
 import { config } from './config.js';
 
@@ -20,6 +21,8 @@ export const s3 = new S3Client({
   requestHandler: {
     requestTimeout: 10_000,   // abandon si MinIO ne répond pas en 10s
     connectionTimeout: 5_000, // abandon si la connexion TCP prend plus de 5s
+    httpAgent: new Agent({ keepAlive: true, maxSockets: 50 }),
+    socketAcquisitionWarningTimeout: 5_000, // log si toutes les connexions vers MinIO restent occupées
   },
 });
 
@@ -32,6 +35,11 @@ export async function ensureBucket(): Promise<void> {
     const code = (err as { Code?: string; name?: string }).Code ?? (err as { name?: string }).name ?? '';
     if (!['BucketAlreadyOwnedByYou', 'BucketAlreadyExists'].includes(code)) throw err;
   }
+}
+
+export function isNotFound(err: unknown): boolean {
+  const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return e.name === 'NoSuchKey' || e.name === 'NotFound' || e.$metadata?.httpStatusCode === 404;
 }
 
 export async function upload(key: string, body: Buffer, contentType: string): Promise<void> {
