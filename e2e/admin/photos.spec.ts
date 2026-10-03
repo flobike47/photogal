@@ -1,5 +1,6 @@
 import { test, expect, adminState } from '../fixtures';
-import type { Page, APIRequestContext } from '@playwright/test';
+import type { Page, APIRequestContext, Request } from '@playwright/test';
+import sharp from 'sharp';
 import { reseed } from '../helpers/reseed';
 import { fixture, HEIC_FIXTURE, imageSize } from '../helpers/files';
 
@@ -76,6 +77,58 @@ test.describe('A12 — Upload de photos', () => {
     const original = await adminApi.get(`/api/photos/${photos[0].id}/original`);
     expect(original.headers()['content-type']).toBe('image/jpeg');
     expect(await imageSize(await original.body())).toMatchObject({ format: 'jpeg', width: 1280, height: 854 });
+  });
+});
+
+test.describe('A12b — Upload en masse', () => {
+  test('30 photos partent 3 par 3, la grille n\'est rechargée qu\'au fil des lots, toutes ont leur miniature', async ({ page, adminApi }) => {
+    test.setTimeout(120_000);
+    const files = await Promise.all(Array.from({ length: 30 }, async (_, i) => ({
+      name: `lot_${String(i + 1).padStart(2, '0')}.jpg`,
+      mimeType: 'image/jpeg',
+      buffer: await sharp({ create: { width: 1600, height: 1200, channels: 3, background: { r: 40 + i * 5, g: 90, b: 140 } } })
+        .jpeg()
+        .toBuffer(),
+    })));
+
+    const isUpload = (r: Request) => r.url().includes('/api/photos/upload/') && r.method() === 'POST';
+    // Intervalles mesurés par le navigateur : l'ordre d'arrivée des événements côté test n'est pas fiable
+    const uploads: { start: number; end: number }[] = [];
+    let listFetches = 0;
+    page.on('request', (r) => {
+      if (r.url().includes('/api/albums/album-vide/photos')) listFetches++;
+    });
+    page.on('requestfinished', (r) => {
+      if (!isUpload(r)) return;
+      const { startTime, responseEnd } = r.timing();
+      uploads.push({ start: startTime, end: startTime + responseEnd });
+    });
+
+    const before = (await albumPhotos(adminApi, 'album-vide')).length;
+    await page.goto('/admin/albums/album-vide');
+    await expect(page.locator('.ant-card-head .ant-badge-count')).toHaveText(String(before));
+    const fetchesBefore = listFetches;
+
+    await page.locator('input[type=file]').setInputFiles(files);
+    const banner = page.getByTestId('upload-progress');
+    await expect(banner).toContainText(/Envoi des photos — \d+ \/ 30/);
+    await expect(banner.locator('.ant-progress')).toBeVisible();
+    await expect(cards(page)).toHaveCount(before + 30, { timeout: 90_000 });
+    await expect(page.getByTestId('upload-progress')).toBeHidden();
+
+    expect(uploads).toHaveLength(30);
+    const maxInFlight = Math.max(...uploads.map((u) => uploads.filter((o) => o.start <= u.start && u.start < o.end).length));
+    expect(maxInFlight).toBeLessThanOrEqual(3);
+    // Un rafraîchissement intermédiaire (20 photos) et un final, au lieu d'un par photo
+    expect(listFetches - fetchesBefore).toBeLessThanOrEqual(3);
+
+    const uploaded = (await albumPhotos(adminApi, 'album-vide')).filter((p) => p.original_name.startsWith('lot_'));
+    expect(uploaded).toHaveLength(30);
+    for (const photo of uploaded) {
+      const thumb = await adminApi.get(`/api/photos/${photo.id}/thumb`);
+      expect(thumb.status()).toBe(200);
+      expect(thumb.headers()['content-type']).toBe('image/jpeg');
+    }
   });
 });
 

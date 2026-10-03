@@ -4,9 +4,10 @@ import { extname, basename } from 'path';
 import { ZipArchive } from 'archiver';
 import { db } from '../db.js';
 import { authenticate } from '../middleware/authenticate.js';
-import { upload, download, downloadBuffer, remove, exists } from '../storage.js';
+import { upload, download, downloadBuffer, remove, isNotFound } from '../storage.js';
 import { isHeic, heicToJpeg, thumbKey, generateAndUploadThumb } from '../images.js';
 import { config } from '../config.js';
+import type { Readable } from 'stream';
 import type { Photo } from '../types.js';
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -38,22 +39,28 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
 
     const tKey = thumbKey(photo);
 
-    if (!await exists(tKey)) {
-      const pKey = photoKey(photo);
-      if (!await exists(pKey)) return reply.status(404).send({ error: 'Fichier introuvable' });
+    let stream: Readable;
+    try {
+      stream = await download(tKey);
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+      // Miniature absente (photo ancienne ou génération en cours) : on la génère, ou on attend
+      // celle déjà lancée pour cette photo
       try {
-        const srcBuffer = await downloadBuffer(pKey);
-        await generateAndUploadThumb(srcBuffer, tKey, photo.mime_type);
-      } catch {
-        const stream = await download(pKey);
+        await generateAndUploadThumb(() => downloadBuffer(photoKey(photo)), tKey, photo.mime_type);
+        stream = await download(tKey);
+      } catch (genErr) {
+        if (isNotFound(genErr)) return reply.status(404).send({ error: 'Fichier introuvable' });
+        request.log.warn({ err: genErr, photoId: photo.id }, 'thumbnail generation failed, serving original');
+        const original = await download(photoKey(photo));
+        reply.raw.on('close', () => original.destroy());
         return reply
           .header('Content-Type', photo.mime_type)
           .header('Cache-Control', 'public, max-age=3600')
-          .send(stream);
+          .send(original);
       }
     }
 
-    const stream = await download(tKey);
     reply.raw.on('close', () => stream.destroy());
     return reply
       .header('Content-Type', 'image/jpeg')
@@ -156,6 +163,11 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
 
     const skipped: string[] = [];
 
+    const storageLimit = config.storageLimitGb ? config.storageLimitGb * 1024 * 1024 * 1024 : null;
+    let storageUsed = storageLimit
+      ? (db.prepare('SELECT COALESCE(SUM(size), 0) as total FROM photos').get() as { total: number }).total
+      : 0;
+
     for await (const part of parts) {
       const heic = isHeic(part.mimetype, part.filename);
       if (!heic && !ALLOWED_MIME_TYPES.has(part.mimetype)) {
@@ -188,11 +200,8 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
       const now = new Date().toISOString();
 
       // Check storage limit
-      if (config.storageLimitGb) {
-        const { total } = db.prepare('SELECT COALESCE(SUM(size), 0) as total FROM photos').get() as { total: number };
-        if (total + buffer.length > config.storageLimitGb * 1024 * 1024 * 1024) {
-          return reply.status(413).send({ error: `Limite de stockage atteinte (${config.storageLimitGb} Go). Supprimez des photos pour libérer de l'espace.` });
-        }
+      if (storageLimit && storageUsed + buffer.length > storageLimit) {
+        return reply.status(413).send({ error: `Limite de stockage atteinte (${config.storageLimitGb} Go). Supprimez des photos pour libérer de l'espace.` });
       }
 
       await upload(`photos/${request.params.albumId}/${filename}`, buffer, mimeType);
@@ -201,11 +210,18 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
         `INSERT INTO photos (id, album_id, filename, original_name, mime_type, size, share_token, sort_order, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(id, request.params.albumId, filename, originalName, mimeType, buffer.length, nanoid(12), nextOrder++, now);
+      storageUsed += buffer.length;
 
       const photo = db.prepare('SELECT * FROM photos WHERE id = ?').get(id) as Photo;
       uploaded.push(photo);
 
-      generateAndUploadThumb(buffer, thumbKey(photo), mimeType).catch(() => {});
+      // Attendue avant de répondre : le client n'envoie la photo suivante qu'une fois celle-ci
+      // traitée, ce qui borne la mémoire. Un échec n'annule pas l'upload (régénérée à la demande).
+      try {
+        await generateAndUploadThumb(buffer, thumbKey(photo), mimeType);
+      } catch (err) {
+        request.log.warn({ err, photoId: id }, 'thumbnail generation failed');
+      }
     }
 
     return reply.status(201).send({ photos: uploaded, skipped });

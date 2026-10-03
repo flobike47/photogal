@@ -31,4 +31,6 @@ export const config = {
   s3SecretKey: process.env.S3_SECRET_KEY ?? 'minioadmin',
   s3Bucket: process.env.S3_BUCKET ?? 'photogal',
   storageLimitGb: parseFloat(process.env.STORAGE_LIMIT_GB ?? '0') || null,
+  // Nombre d'images décodées en même temps (sharp / HEIC) : 1 suffit sur un Raspberry Pi
+  imageConcurrency: Math.max(1, Number(process.env.IMAGE_CONCURRENCY ?? 1) || 1),
 };

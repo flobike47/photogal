@@ -13,6 +13,7 @@ import {
   Tag,
   Tooltip,
   Badge,
+  Progress,
 } from 'antd';
 import {
   UploadOutlined,
@@ -40,13 +41,19 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import { apiClient } from '../../api/client';
 import type { Album, Photo } from '../../types';
 import { thumbUrl } from '../../utils/thumb';
+import { createLimiter } from '../../utils/limit';
 
 const { Title, Text } = Typography;
+
+// Envoi 3 par 3 : un dossier de 200 photos ne doit pas arriver d'un bloc sur le serveur
+const uploadQueue = createLimiter(3);
+// Rafraîchit la grille toutes les N photos envoyées, et une fois à la fin
+const REFRESH_EVERY = 20;
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -106,6 +113,7 @@ function SortablePhotoCard({ photo, isCover, onSetCover, onDelete, onCopyLink }:
         src={thumbUrl(photo.id)}
         alt={photo.original_name}
         style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
+        loading="lazy"
       />
       <div style={{ padding: '8px 10px' }}>
         <Tooltip title={photo.original_name}>
@@ -212,28 +220,67 @@ export function AlbumPhotosPage() {
     reorderMutation.mutate(reordered.map((p) => p.id));
   }, [localPhotos, reorderMutation]);
 
-  const uploadPhoto = async (options: UploadRequestOption) => {
-    const formData = new FormData();
-    formData.append('file', options.file as File);
-    try {
-      const { data } = await apiClient.post<{ skipped?: string[] }>(`/photos/upload/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          if (e.total && options.onProgress) {
-            options.onProgress({ percent: Math.round((e.loaded / e.total) * 100) });
-          }
-        },
-      });
-      if (data.skipped?.length) {
-        msg.warning(`Fichier refusé : ${data.skipped.join(', ')}. Formats acceptés : JPEG, PNG, WebP, GIF, HEIC, AVIF, TIFF.`);
-      }
-      options.onSuccess?.({});
-      qc.invalidateQueries({ queryKey: ['admin-album-photos', id] });
-      qc.invalidateQueries({ queryKey: ['admin-albums'] });
-    } catch (err) {
-      options.onError?.(err as Error);
-      msg.error('Erreur lors de l\'upload');
+  const batch = useRef({ total: 0, done: 0, failed: 0, skipped: [] as string[] });
+  const [progress, setProgress] = useState<{ done: number; total: number; failed: number; skipped: number } | null>(null);
+  const showProgress = () => {
+    const b = batch.current;
+    setProgress({ done: b.done, total: b.total, failed: b.failed, skipped: b.skipped.length });
+  };
+
+  // Fermer ou recharger l'onglet pendant l'envoi perdrait les photos restantes : le navigateur demande confirmation
+  const uploading = progress !== null;
+  useEffect(() => {
+    if (!uploading) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [uploading]);
+
+  const refreshPhotos = () => {
+    qc.invalidateQueries({ queryKey: ['admin-album-photos', id] });
+    qc.invalidateQueries({ queryKey: ['admin-albums'] });
+  };
+
+  const finishUpload = () => {
+    const b = batch.current;
+    b.done++;
+    if (b.done < b.total) {
+      showProgress();
+      if (b.done % REFRESH_EVERY === 0) refreshPhotos();
+      return;
     }
+    refreshPhotos();
+    if (b.skipped.length) {
+      const label = b.skipped.length > 1 ? 'Fichiers refusés' : 'Fichier refusé';
+      msg.warning(`${label} : ${b.skipped.join(', ')}. Formats acceptés : JPEG, PNG, WebP, GIF, HEIC, AVIF, TIFF.`);
+    }
+    if (b.failed) msg.error(`${b.failed} photo(s) n'ont pas pu être envoyée(s)`);
+    batch.current = { total: 0, done: 0, failed: 0, skipped: [] };
+    setProgress(null);
+  };
+
+  const uploadPhoto = (options: UploadRequestOption) => {
+    batch.current.total++;
+    showProgress();
+    void uploadQueue(async () => {
+      const formData = new FormData();
+      formData.append('file', options.file as File);
+      try {
+        const { data } = await apiClient.post<{ skipped?: string[] }>(`/photos/upload/${id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (e) => {
+            if (e.total && options.onProgress) {
+              options.onProgress({ percent: Math.round((e.loaded / e.total) * 100) });
+            }
+          },
+        });
+        if (data.skipped?.length) batch.current.skipped.push(...data.skipped);
+        options.onSuccess?.({});
+      } catch (err) {
+        batch.current.failed++;
+        options.onError?.(err as Error);
+      }
+    }).finally(finishUpload);
   };
 
   const copyShareLink = () => {
@@ -288,6 +335,29 @@ export function AlbumPhotosPage() {
           </Space>
         }
       >
+        {progress && (
+          <div
+            data-testid="upload-progress"
+            style={{ marginBottom: 16, padding: '12px 16px', border: '1px solid #91caff', borderRadius: 8, background: '#e6f4ff' }}
+          >
+            <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+              <Text strong>Envoi des photos — {progress.done} / {progress.total}</Text>
+              <Space size={12}>
+                {progress.skipped > 0 && (
+                  <Text type="warning">
+                    {progress.skipped} fichier{progress.skipped > 1 ? 's' : ''} refusé{progress.skipped > 1 ? 's' : ''}
+                  </Text>
+                )}
+                {progress.failed > 0 && <Text type="danger">{progress.failed} en échec</Text>}
+              </Space>
+            </Space>
+            <Progress percent={Math.floor((progress.done / progress.total) * 100)} status="active" />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Ne fermez pas cette page avant la fin de l'envoi.
+            </Text>
+          </div>
+        )}
+
         {albumData.description && (
           <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
             {albumData.description}
