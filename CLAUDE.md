@@ -14,6 +14,7 @@ Site pour photographe auto-hébergé : galeries partagées par lien, albums priv
 - `apps/web` — React 19 + Ant Design 5 + React Router 7 + TanStack Query + Zustand + Vite.
   - `api/client.ts` : instance axios unique (`apiClient`, `baseURL: '/api'`, cookie de session). Ne pas créer d'autre client.
   - `pages/public/*` (site visiteur), `pages/admin/*` (back-office), `store/` (Zustand : auth, config du site).
+- `deploy/backup/` — image de sauvegarde nocturne (rclone : dump SQLite + miroir du bucket vers Google Drive chiffré). Procédures dans son `README.md`.
 - `e2e/` — Playwright. `PARCOURS.md` = référence des parcours et critères d'acceptation (V1…, A1…).
 - `.claude/` : `settings.json` (permissions, hooks format + vérif), `skills/` (`feature`, `bugfix`, `ship`, `photogal-run`).
 - `DEVELOPPEMENT.md` (dev local, données de test), `MANUEL.md` (manuel utilisateur).
@@ -58,6 +59,7 @@ Comptes et liens de test : voir `DEVELOPPEMENT.md` (admin `admin@localhost` / `d
 - **Raspberry Pi** : mémoire et CPU limités. Traiter les images une par une (`IMAGE_CONCURRENCY`), streamer les fichiers (jamais de `Buffer` d'un album entier), ne pas bloquer l'event loop (cf. fix ZIP 08eca29). Pas de dépendance native sans build ARM64.
 - **Streams S3** : toujours consommer ou détruire le body, sinon fuite de sockets (cf. 5f69e47).
 - **Déploiement réel** : `docker-compose.yml` (minio + api qui sert le web) + image construite par `.github/workflows/build-and-push.yml` sur push `main`. `docker-compose.prod.yml`, `apps/web/Dockerfile` et les `nginx.conf` sont **obsolètes** (à supprimer), ne pas s'y fier.
+- **Stack Portainer = copie du compose** : modifier `docker-compose.yml` ne change pas la prod. Tout changement de service ou de variable doit être reporté à la main dans Portainer (le signaler à l'utilisateur, avec le bloc à coller).
 - **Prod derrière reverse proxy** : `TRUST_PROXY=true` est requis pour la limite d'essais de mot de passe par IP.
 - **Accès par lien** : connaître le lien d'un album public suffit pour le voir, c'est voulu.
 - **Seed** : refuse de tourner si `NODE_ENV=production`, si `S3_ENDPOINT` n'est pas local ou si le bucket ne finit pas par `-dev`. Ne pas lancer pendant que la suite e2e tourne.

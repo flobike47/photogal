@@ -9,6 +9,7 @@ on:
 env:
   PLATFORMS: linux/arm64
   API_IMAGE: photogal-api
+  BACKUP_IMAGE: photogal-backup
 
 concurrency:
   group: build-and-push-${{ github.ref }}
@@ -79,12 +80,47 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
+  # Sauvegarde nocturne (rclone) — deploy/backup
+  # ---------------------------------------------------------------------------
+  build-backup:
+    name: Build & push backup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build backup image
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.BACKUP_IMAGE }}
+          tags: latest
+          platforms: ${{ env.PLATFORMS }}
+          context: ./deploy/backup
+          containerfiles: |
+            ./deploy/backup/Dockerfile
+
+      - name: Push backup to registry
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_USERPASSWORD }}
+
+  # ---------------------------------------------------------------------------
   # Redéploiement Portainer
   # ---------------------------------------------------------------------------
   redeploy-portainer:
     name: Trigger Portainer redeploy
     runs-on: ubuntu-latest
-    needs: [build-api]
+    needs: [build-api, build-backup]
     if: success()
     steps:
       - name: Call Portainer stack webhook
@@ -113,6 +149,7 @@ jobs:
             echo "| Service | Tag |"
             echo "| --- | --- |"
             echo "| API (+ Web) | \`${{ env.API_IMAGE }}:latest\` |"
+            echo "| Sauvegarde | \`${{ env.BACKUP_IMAGE }}:latest\` |"
             echo ""
             echo "- [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
             echo "- Portainer : webhook déclenché"
