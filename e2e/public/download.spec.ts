@@ -44,7 +44,9 @@ test.describe('V7 — Sélection de photos', () => {
     expect(zipEntries(await readDownload(download)).sort()).toEqual(['IMG_01.jpg', 'IMG_02.jpg']);
   });
 
-  test('tout sélectionner puis télécharger donne le ZIP de l\'album complet (sans limite de nombre)', async ({ page }) => {
+  test("tout sélectionner puis télécharger donne le ZIP de l'album complet (sans limite de nombre)", async ({
+    page,
+  }) => {
     await page.getByRole('button', { name: 'Tout sélectionner' }).click();
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Télécharger la sélection' }).click();
@@ -55,7 +57,7 @@ test.describe('V7 — Sélection de photos', () => {
 });
 
 test.describe('V8 — Tout télécharger', () => {
-  test('produit un ZIP de toutes les photos de l\'album, avec leurs noms d\'origine', async ({ page }) => {
+  test("produit un ZIP de toutes les photos de l'album, avec leurs noms d'origine", async ({ page }) => {
     await page.goto('/share/demo-mariage');
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Tout télécharger' }).click();
@@ -69,7 +71,7 @@ test.describe('V8 — Tout télécharger', () => {
 });
 
 test.describe('V9 — Télécharger une photo', () => {
-  test('le bouton « Télécharger » au survol renvoie l\'original avec son nom', async ({ page }) => {
+  test("le bouton « Télécharger » au survol renvoie l'original avec son nom", async ({ page }) => {
     await page.goto('/share/demo-mariage');
     const card = page.locator('.pg-photo-card').first();
     await card.hover();
@@ -82,19 +84,19 @@ test.describe('V9 — Télécharger une photo', () => {
 });
 
 test.describe('V10 — Album non téléchargeable', () => {
-  test('aucune action de téléchargement n\'est proposée', async ({ page }) => {
+  test("aucune action de téléchargement n'est proposée", async ({ page }) => {
     await page.goto('/share/demo-non-telechargeable');
     await expect(page.locator('.pg-photo-card')).toHaveCount(5);
     await expect(page.locator('.pg-photo-card > div:not(.ant-image)')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Tout télécharger' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Tout sélectionner' })).toHaveCount(0);
-    await expect(page.getByText('Survolez une photo pour l\'apercevoir')).toBeVisible();
+    await expect(page.getByText("Survolez une photo pour l'apercevoir")).toBeVisible();
 
     await page.locator('.pg-photo-card').first().hover();
     await expect(page.locator('.pg-photo-card').first().getByRole('button', { name: 'Télécharger' })).toHaveCount(0);
   });
 
-  test('le ZIP de l\'album est refusé par l\'API', async ({ request }) => {
+  test("le ZIP de l'album est refusé par l'API", async ({ request }) => {
     const res = await request.get('/api/albums/share/demo-non-telechargeable/download');
     expect(res.status()).toBe(403);
   });

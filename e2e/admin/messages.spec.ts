@@ -20,7 +20,7 @@ test.describe('A18 — Messages de contact', () => {
     await expect(page.locator('.ant-table-tbody').getByText('Non lu', { exact: true })).toHaveCount(3);
   });
 
-  test('lire un message l\'ouvre dans le tiroir et le marque comme lu', async ({ page }) => {
+  test("lire un message l'ouvre dans le tiroir et le marque comme lu", async ({ page }) => {
     await page.goto('/admin/messages');
     await expect(menuBadge(page)).toHaveText('3');
     await rows(page).filter({ hasText: 'Entreprise ACME' }).getByRole('button', { name: 'Lire' }).click();
@@ -28,8 +28,10 @@ test.describe('A18 — Messages de contact', () => {
     await expect(drawer(page)).toContainText('Message de Entreprise ACME');
     await expect(drawer(page)).toContainText('rh@acme.example.com');
     await expect(drawer(page)).toContainText('Pouvez-vous nous rappeler ?'); // message multi-ligne complet
-    await expect(drawer(page).getByRole('link', { name: 'Répondre par email' }))
-      .toHaveAttribute('href', 'mailto:rh@acme.example.com?subject=Re: Votre message');
+    await expect(drawer(page).getByRole('link', { name: 'Répondre par email' })).toHaveAttribute(
+      'href',
+      'mailto:rh@acme.example.com?subject=Re: Votre message',
+    );
 
     await expect(page.locator('.ant-card-head').getByText('2 non lu(s)')).toBeVisible();
     await expect(menuBadge(page)).toHaveText('2');

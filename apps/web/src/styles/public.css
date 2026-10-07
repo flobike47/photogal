@@ -1,6 +1,17 @@
 /* ─── Fonts & resets ─── */
-*, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family:
+    'Inter',
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
 
 :root {
   --pg-heading-font: 'Cormorant Garamond', Georgia, serif;
@@ -19,9 +30,13 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
   background: #111;
 }
 .pg-album-card img {
-  width: 100%; height: 100%;
-  object-fit: cover; display: block;
-  transition: transform 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 0.85s ease;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition:
+    transform 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 0.85s ease;
   filter: brightness(0.88);
 }
 .pg-album-card:hover img {
@@ -29,15 +44,20 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
   filter: brightness(0.65);
 }
 .pg-album-overlay {
-  position: absolute; bottom: 0; left: 0; right: 0;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   padding: 80px 28px 26px;
-  background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 55%, transparent 100%);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.4) 55%, transparent 100%);
 }
 
 .pg-album-extras {
   opacity: 0;
   transform: translateY(5px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
 }
 .pg-album-card:hover .pg-album-extras {
   opacity: 1;
@@ -51,9 +71,13 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
   background: #0d0d0d;
   cursor: pointer;
 }
-.pg-photo-card .ant-image { display: block; }
+.pg-photo-card .ant-image {
+  display: block;
+}
 .pg-photo-card .ant-image img {
-  display: block; width: 100%; height: 100%;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   transition: transform 0.55s ease;
 }
@@ -63,11 +87,11 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
 
 /* Custom Ant Design image mask */
 .pg-photo-card .ant-image-mask {
-  background: rgba(0,0,0,0) !important;
+  background: rgba(0, 0, 0, 0) !important;
   transition: background 0.3s ease !important;
 }
 .pg-photo-card:hover .ant-image-mask {
-  background: rgba(0,0,0,0.52) !important;
+  background: rgba(0, 0, 0, 0.52) !important;
 }
 .pg-photo-card .ant-image-mask-info {
   display: flex;
@@ -78,31 +102,67 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
 
 /* ─── Animations ─── */
 @keyframes pg-fade-up {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.pg-fade-up   { opacity: 0; animation: pg-fade-up 0.9s ease forwards; }
-.pg-fade-up-1 { opacity: 0; animation: pg-fade-up 0.9s ease 0.12s forwards; }
-.pg-fade-up-2 { opacity: 0; animation: pg-fade-up 0.9s ease 0.24s forwards; }
-.pg-fade-up-3 { opacity: 0; animation: pg-fade-up 0.9s ease 0.38s forwards; }
-.pg-fade-up-4 { opacity: 0; animation: pg-fade-up 0.9s ease 0.52s forwards; }
+.pg-fade-up {
+  opacity: 0;
+  animation: pg-fade-up 0.9s ease forwards;
+}
+.pg-fade-up-1 {
+  opacity: 0;
+  animation: pg-fade-up 0.9s ease 0.12s forwards;
+}
+.pg-fade-up-2 {
+  opacity: 0;
+  animation: pg-fade-up 0.9s ease 0.24s forwards;
+}
+.pg-fade-up-3 {
+  opacity: 0;
+  animation: pg-fade-up 0.9s ease 0.38s forwards;
+}
+.pg-fade-up-4 {
+  opacity: 0;
+  animation: pg-fade-up 0.9s ease 0.52s forwards;
+}
 
 @keyframes pg-line-grow {
-  from { height: 0; opacity: 0; }
-  to   { height: 80px; opacity: 1; }
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: 80px;
+    opacity: 1;
+  }
 }
-.pg-line-anim { animation: pg-line-grow 0.9s ease forwards; }
+.pg-line-anim {
+  animation: pg-line-grow 0.9s ease forwards;
+}
 
 /* ─── Scroll indicator bounce ─── */
 @keyframes pg-bounce {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(6px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
 }
-.pg-bounce { animation: pg-bounce 2s ease infinite; }
+.pg-bounce {
+  animation: pg-bounce 2s ease infinite;
+}
 
 /* ─── Nav link hover ─── */
 .pg-nav-link {
-  color: rgba(255,255,255,0.65);
+  color: rgba(255, 255, 255, 0.65);
   text-decoration: none;
   font-size: 12px;
   letter-spacing: 0.18em;
@@ -115,18 +175,26 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
 .pg-nav-link::after {
   content: '';
   position: absolute;
-  bottom: 0; left: 0;
-  width: 0; height: 1px;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
   background: currentColor;
   transition: width 0.3s ease;
 }
-.pg-nav-link:hover, .pg-nav-link.active { color: #fff; }
-.pg-nav-link:hover::after, .pg-nav-link.active::after { width: 100%; }
+.pg-nav-link:hover,
+.pg-nav-link.active {
+  color: #fff;
+}
+.pg-nav-link:hover::after,
+.pg-nav-link.active::after {
+  width: 100%;
+}
 
 /* ─── Ghost button (dark bg) ─── */
 .pg-btn-ghost {
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.38);
+  border: 1px solid rgba(255, 255, 255, 0.38);
   color: #fff;
   padding: 14px 44px;
   font-size: 11px;
@@ -148,7 +216,7 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
 /* ─── Dark button (light bg) ─── */
 .pg-btn-dark {
   background: transparent;
-  border: 1px solid rgba(0,0,0,0.28);
+  border: 1px solid rgba(0, 0, 0, 0.28);
   color: #111;
   padding: 14px 44px;
   font-size: 11px;
@@ -168,11 +236,12 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
 }
 
 /* ─── Contact form inputs ─── */
-.pg-input, .pg-textarea {
+.pg-input,
+.pg-textarea {
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(0,0,0,0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
   padding: 12px 0;
   font-family: 'Inter', sans-serif;
   font-size: 15px;
@@ -182,14 +251,24 @@ body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-
   transition: border-color 0.25s;
   resize: none;
 }
-.pg-input:focus, .pg-textarea:focus {
+.pg-input:focus,
+.pg-textarea:focus {
   border-bottom-color: #111;
 }
-.pg-input::placeholder, .pg-textarea::placeholder {
-  color: rgba(0,0,0,0.3);
+.pg-input::placeholder,
+.pg-textarea::placeholder {
+  color: rgba(0, 0, 0, 0.3);
 }
 
-.pg-rich-text p { margin: 0 0 0.6em; }
-.pg-rich-text p:last-child { margin-bottom: 0; }
-.pg-rich-text strong { font-weight: 600; }
-.pg-rich-text em { font-style: italic; }
+.pg-rich-text p {
+  margin: 0 0 0.6em;
+}
+.pg-rich-text p:last-child {
+  margin-bottom: 0;
+}
+.pg-rich-text strong {
+  font-weight: 600;
+}
+.pg-rich-text em {
+  font-style: italic;
+}

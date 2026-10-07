@@ -12,10 +12,16 @@ const popconfirm = (page: Page) => page.locator('.ant-popconfirm');
 const modal = (page: Page) => page.getByRole('dialog');
 
 async function albumByName(adminApi: import('@playwright/test').APIRequestContext, name: string) {
-  const { albums } = await (await adminApi.get('/api/albums')).json() as { albums: { id: string; name: string; share_token: string }[] };
+  const { albums } = (await (await adminApi.get('/api/albums')).json()) as {
+    albums: { id: string; name: string; share_token: string }[];
+  };
   const album = albums.find((a) => a.name === name);
   if (!album) throw new Error(`Album « ${name} » introuvable`);
-  return (await (await adminApi.get(`/api/albums/${album.id}`)).json()) as Record<string, unknown> & { id: string; share_token: string; allowed_emails: string[] };
+  return (await (await adminApi.get(`/api/albums/${album.id}`)).json()) as Record<string, unknown> & {
+    id: string;
+    share_token: string;
+    allowed_emails: string[];
+  };
 }
 
 // A4 → A10
@@ -29,7 +35,7 @@ test.describe('A4 — Liste des albums', () => {
     await expect(page.locator('.ant-table-tbody').getByText('Privé', { exact: true })).toHaveCount(2);
   });
 
-  test('le nom de l\'album et l\'icône photos mènent à la gestion des photos', async ({ page }) => {
+  test("le nom de l'album et l'icône photos mènent à la gestion des photos", async ({ page }) => {
     await page.goto('/admin/albums');
     await row(page, 'Mariage Julie & Thomas').getByRole('link', { name: 'Mariage Julie & Thomas' }).click();
     await expect(page).toHaveURL('/admin/albums/album-mariage');
@@ -58,10 +64,18 @@ test.describe('A5 — Créer un album', () => {
     await expect(row(page, 'E2E Public')).toContainText('Public');
 
     const album = await albumByName(adminApi, 'E2E Public');
-    expect(album).toMatchObject({ description: 'Créé par les tests', is_public: 1, is_downloadable: 0, is_portfolio: 0 });
+    expect(album).toMatchObject({
+      description: 'Créé par les tests',
+      is_public: 1,
+      is_downloadable: 0,
+      is_portfolio: 0,
+    });
 
     await page.goto('/');
-    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'E2E Public' })).toHaveAttribute('href', `/share/${album.share_token}`);
+    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'E2E Public' })).toHaveAttribute(
+      'href',
+      `/share/${album.share_token}`,
+    );
   });
 
   test('un album portfolio apparaît dans le portfolio', async ({ page }) => {
@@ -77,12 +91,16 @@ test.describe('A5 — Créer un album', () => {
     await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'E2E Portfolio' })).toHaveCount(0);
   });
 
-  test('un album privé avec mot de passe et emails autorisés est accessible par ces deux moyens', async ({ page, adminApi, request }) => {
+  test('un album privé avec mot de passe et emails autorisés est accessible par ces deux moyens', async ({
+    page,
+    adminApi,
+    request,
+  }) => {
     await page.goto('/admin/albums');
     await page.getByRole('button', { name: 'Nouvel album' }).click();
     await modal(page).getByLabel('Nom').fill('E2E Privé');
     await modal(page).getByRole('switch', { name: 'Visible publiquement' }).click(); // → privé
-    await modal(page).getByLabel('Mot de passe d\'accès').fill('secret-e2e');
+    await modal(page).getByLabel("Mot de passe d'accès").fill('secret-e2e');
     const emails = modal(page).getByLabel('Accès par email');
     await emails.fill('Ami@Example.com');
     await emails.press('Enter');
@@ -97,12 +115,14 @@ test.describe('A5 — Créer un album', () => {
     expect(await unlock.json()).toEqual({ share_token: album.share_token });
 
     await page.goto('/');
-    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'E2E Privé' })).toContainText('Protégé par mot de passe');
+    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'E2E Privé' })).toContainText(
+      'Protégé par mot de passe',
+    );
   });
 });
 
 test.describe('A6 — Modifier un album', () => {
-  test('renommer un album et le passer en portfolio le déplace sur l\'accueil', async ({ page }) => {
+  test("renommer un album et le passer en portfolio le déplace sur l'accueil", async ({ page }) => {
     await page.goto('/admin/albums');
     await rowAction(page, 'Épreuves', 'edit').click();
     await expect(modal(page).getByLabel('Nom')).toHaveValue('Épreuves (non téléchargeable)');
@@ -134,12 +154,12 @@ test.describe('A6 — Modifier un album', () => {
     expect(unlock.status()).toBe(200);
   });
 
-  test('changer puis retirer le mot de passe d\'un album', async ({ page, request }) => {
+  test("changer puis retirer le mot de passe d'un album", async ({ page, request }) => {
     const unlock = (password: string) => request.post('/api/albums/album-prive-mdp/unlock', { data: { password } });
     await page.goto('/admin/albums');
     await rowAction(page, 'Séance privée', 'edit').click();
     await expect(modal(page).getByPlaceholder('Inchangé')).toBeVisible();
-    await modal(page).getByLabel('Mot de passe d\'accès').fill('nouveau-mdp');
+    await modal(page).getByLabel("Mot de passe d'accès").fill('nouveau-mdp');
     await modal(page).getByRole('button', { name: 'Mettre à jour' }).click();
     await expect(page.getByText('Album mis à jour')).toBeVisible();
     expect((await unlock('test1234')).status()).toBe(401);
@@ -152,12 +172,14 @@ test.describe('A6 — Modifier un album', () => {
     expect((await unlock('nouveau-mdp')).status()).toBe(400); // plus de mot de passe
 
     await page.goto('/');
-    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'Séance privée' })).toContainText('Accès sur invitation');
+    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'Séance privée' })).toContainText(
+      'Accès sur invitation',
+    );
   });
 });
 
 test.describe('A7 — Couverture indépendante', () => {
-  test('l\'image uploadée dans la modale devient la couverture de la carte', async ({ page, adminApi }) => {
+  test("l'image uploadée dans la modale devient la couverture de la carte", async ({ page, adminApi }) => {
     await page.goto('/admin/albums');
     await rowAction(page, 'Mariage Julie & Thomas', 'edit').click();
     await modal(page).locator('input[type=file]').setInputFiles(fixture('couverture.png'));
@@ -170,13 +192,15 @@ test.describe('A7 — Couverture indépendante', () => {
     expect(cover.headers()['content-type']).toBe('image/png');
 
     await page.goto('/');
-    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'Mariage' }).locator('img'))
-      .toHaveAttribute('src', '/api/albums/album-mariage/cover');
+    await expect(page.locator('#albums .pg-album-card').filter({ hasText: 'Mariage' }).locator('img')).toHaveAttribute(
+      'src',
+      '/api/albums/album-mariage/cover',
+    );
   });
 });
 
 test.describe('A8 — Copier le lien de partage', () => {
-  test('copie l\'URL publique de l\'album', async ({ page, readClipboard }) => {
+  test("copie l'URL publique de l'album", async ({ page, readClipboard }) => {
     await page.goto('/admin/albums');
     await rowAction(page, 'Paysages', 'link').click();
     await expect(page.getByText('Lien copié dans le presse-papiers')).toBeVisible();
@@ -185,10 +209,10 @@ test.describe('A8 — Copier le lien de partage', () => {
 });
 
 test.describe('A9 — Régénérer le lien', () => {
-  test('l\'ancien lien ne fonctionne plus, le nouveau est copié et fonctionne', async ({ page, readClipboard }) => {
+  test("l'ancien lien ne fonctionne plus, le nouveau est copié et fonctionne", async ({ page, readClipboard }) => {
     await page.goto('/admin/albums');
     await rowAction(page, 'Portraits', 'reload').click();
-    await expect(popconfirm(page)).toContainText('L\'ancien lien ne fonctionnera plus.');
+    await expect(popconfirm(page)).toContainText("L'ancien lien ne fonctionnera plus.");
     await popconfirm(page).getByRole('button', { name: 'Oui' }).click();
     await expect(page.getByText('Nouveau lien généré et copié !')).toBeVisible();
 
@@ -204,8 +228,10 @@ test.describe('A9 — Régénérer le lien', () => {
 });
 
 test.describe('A10 — Supprimer un album', () => {
-  test('après confirmation, l\'album, son lien et ses photos disparaissent', async ({ page, adminApi }) => {
-    const { photos } = await (await adminApi.get('/api/albums/album-portfolio-paysages/photos')).json() as { photos: { id: string }[] };
+  test("après confirmation, l'album, son lien et ses photos disparaissent", async ({ page, adminApi }) => {
+    const { photos } = (await (await adminApi.get('/api/albums/album-portfolio-paysages/photos')).json()) as {
+      photos: { id: string }[];
+    };
     expect(photos.length).toBe(8);
 
     await page.goto('/admin/albums');

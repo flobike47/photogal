@@ -11,9 +11,14 @@ import type { Readable } from 'stream';
 import type { Photo } from '../types.js';
 
 const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg', 'image/png', 'image/webp',
-  'image/gif', 'image/heic', 'image/heif',
-  'image/avif', 'image/tiff',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/avif',
+  'image/tiff',
 ]);
 
 export const photoRoutes: FastifyPluginAsync = async (app) => {
@@ -60,10 +65,7 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
 
     const stream = await download(photoKey(photo));
     reply.raw.on('close', () => stream.destroy());
-    return reply
-      .header('Content-Type', photo.mime_type)
-      .header('Cache-Control', 'public, max-age=3600')
-      .send(stream);
+    return reply.header('Content-Type', photo.mime_type).header('Cache-Control', 'public, max-age=3600').send(stream);
   });
 
   // Public: download a photo by its share token
@@ -100,7 +102,9 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
 
       const placeholders = shareTokens.map(() => '?').join(',');
       const found = db
-        .prepare(`SELECT p.*, a.is_downloadable FROM photos p JOIN albums a ON a.id = p.album_id WHERE p.share_token IN (${placeholders})`)
+        .prepare(
+          `SELECT p.*, a.is_downloadable FROM photos p JOIN albums a ON a.id = p.album_id WHERE p.share_token IN (${placeholders})`,
+        )
         .all(...shareTokens) as (Photo & { is_downloadable: number })[];
       if (found.length === 0) return reply.status(404).send({ error: 'Photos introuvables' });
       const photos = found.filter((p) => p.is_downloadable);
@@ -111,96 +115,116 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // Admin: reorder photos within an album
-  app.put<{ Body: { albumId: string; photoIds: string[] } }>('/reorder', { preHandler: [authenticate] }, async (request, reply) => {
-    const { albumId, photoIds } = request.body;
-    if (!albumId || !Array.isArray(photoIds)) return reply.status(400).send({ error: 'Paramètres invalides' });
-    const update = db.prepare('UPDATE photos SET sort_order = ? WHERE id = ? AND album_id = ?');
-    const updateAll = db.transaction(() => {
-      photoIds.forEach((photoId, index) => update.run(index + 1, photoId, albumId));
-    });
-    updateAll();
-    return { ok: true };
-  });
+  app.put<{ Body: { albumId: string; photoIds: string[] } }>(
+    '/reorder',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const { albumId, photoIds } = request.body;
+      if (!albumId || !Array.isArray(photoIds)) return reply.status(400).send({ error: 'Paramètres invalides' });
+      const update = db.prepare('UPDATE photos SET sort_order = ? WHERE id = ? AND album_id = ?');
+      const updateAll = db.transaction(() => {
+        photoIds.forEach((photoId, index) => update.run(index + 1, photoId, albumId));
+      });
+      updateAll();
+      return { ok: true };
+    },
+  );
 
   // Admin: upload one or more photos to an album
-  app.post<{ Params: { albumId: string } }>('/upload/:albumId', { preHandler: [authenticate] }, async (request, reply) => {
-    const album = db.prepare('SELECT id FROM albums WHERE id = ?').get(request.params.albumId);
-    if (!album) return reply.status(404).send({ error: 'Album introuvable' });
+  app.post<{ Params: { albumId: string } }>(
+    '/upload/:albumId',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const album = db.prepare('SELECT id FROM albums WHERE id = ?').get(request.params.albumId);
+      if (!album) return reply.status(404).send({ error: 'Album introuvable' });
 
-    const uploaded: Photo[] = [];
-    const parts = request.files();
+      const uploaded: Photo[] = [];
+      const parts = request.files();
 
-    // Determine starting sort_order (append after existing photos)
-    const { maxOrder } = db.prepare(
-      'SELECT COALESCE(MAX(sort_order), 0) as maxOrder FROM photos WHERE album_id = ?'
-    ).get(request.params.albumId) as { maxOrder: number };
-    let nextOrder = maxOrder + 1;
+      // Determine starting sort_order (append after existing photos)
+      const { maxOrder } = db
+        .prepare('SELECT COALESCE(MAX(sort_order), 0) as maxOrder FROM photos WHERE album_id = ?')
+        .get(request.params.albumId) as { maxOrder: number };
+      let nextOrder = maxOrder + 1;
 
-    const skipped: string[] = [];
+      const skipped: string[] = [];
 
-    const storageLimit = config.storageLimitGb ? config.storageLimitGb * 1024 * 1024 * 1024 : null;
-    let storageUsed = storageLimit
-      ? (db.prepare('SELECT COALESCE(SUM(size), 0) as total FROM photos').get() as { total: number }).total
-      : 0;
+      const storageLimit = config.storageLimitGb ? config.storageLimitGb * 1024 * 1024 * 1024 : null;
+      let storageUsed = storageLimit
+        ? (db.prepare('SELECT COALESCE(SUM(size), 0) as total FROM photos').get() as { total: number }).total
+        : 0;
 
-    for await (const part of parts) {
-      const heic = isHeic(part.mimetype, part.filename);
-      if (!heic && !ALLOWED_MIME_TYPES.has(part.mimetype)) {
-        await part.toBuffer();
-        skipped.push(part.filename);
-        continue;
-      }
-
-      let buffer = await part.toBuffer();
-      let mimeType = part.mimetype;
-      let originalName = part.filename;
-      let ext = extname(part.filename) || '.jpg';
-
-      // HEIC (iPhone) : illisible par la plupart des navigateurs → converti en JPEG
-      if (heic) {
-        try {
-          buffer = await heicToJpeg(buffer);
-        } catch (err) {
-          request.log.warn({ err, filename: part.filename }, 'HEIC conversion failed');
+      for await (const part of parts) {
+        const heic = isHeic(part.mimetype, part.filename);
+        if (!heic && !ALLOWED_MIME_TYPES.has(part.mimetype)) {
+          await part.toBuffer();
           skipped.push(part.filename);
           continue;
         }
-        mimeType = 'image/jpeg';
-        ext = '.jpg';
-        originalName = `${basename(part.filename, extname(part.filename))}.jpg`;
-      }
 
-      const id = nanoid();
-      const filename = `${id}${ext}`;
-      const now = new Date().toISOString();
+        let buffer = await part.toBuffer();
+        let mimeType = part.mimetype;
+        let originalName = part.filename;
+        let ext = extname(part.filename) || '.jpg';
 
-      // Check storage limit
-      if (storageLimit && storageUsed + buffer.length > storageLimit) {
-        return reply.status(413).send({ error: `Limite de stockage atteinte (${config.storageLimitGb} Go). Supprimez des photos pour libérer de l'espace.` });
-      }
+        // HEIC (iPhone) : illisible par la plupart des navigateurs → converti en JPEG
+        if (heic) {
+          try {
+            buffer = await heicToJpeg(buffer);
+          } catch (err) {
+            request.log.warn({ err, filename: part.filename }, 'HEIC conversion failed');
+            skipped.push(part.filename);
+            continue;
+          }
+          mimeType = 'image/jpeg';
+          ext = '.jpg';
+          originalName = `${basename(part.filename, extname(part.filename))}.jpg`;
+        }
 
-      await upload(`photos/${request.params.albumId}/${filename}`, buffer, mimeType);
+        const id = nanoid();
+        const filename = `${id}${ext}`;
+        const now = new Date().toISOString();
 
-      db.prepare(
-        `INSERT INTO photos (id, album_id, filename, original_name, mime_type, size, share_token, sort_order, created_at)
+        // Check storage limit
+        if (storageLimit && storageUsed + buffer.length > storageLimit) {
+          return reply.status(413).send({
+            error: `Limite de stockage atteinte (${config.storageLimitGb} Go). Supprimez des photos pour libérer de l'espace.`,
+          });
+        }
+
+        await upload(`photos/${request.params.albumId}/${filename}`, buffer, mimeType);
+
+        db.prepare(
+          `INSERT INTO photos (id, album_id, filename, original_name, mime_type, size, share_token, sort_order, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(id, request.params.albumId, filename, originalName, mimeType, buffer.length, nanoid(12), nextOrder++, now);
-      storageUsed += buffer.length;
+        ).run(
+          id,
+          request.params.albumId,
+          filename,
+          originalName,
+          mimeType,
+          buffer.length,
+          nanoid(12),
+          nextOrder++,
+          now,
+        );
+        storageUsed += buffer.length;
 
-      const photo = db.prepare('SELECT * FROM photos WHERE id = ?').get(id) as Photo;
-      uploaded.push(photo);
+        const photo = db.prepare('SELECT * FROM photos WHERE id = ?').get(id) as Photo;
+        uploaded.push(photo);
 
-      // Attendue avant de répondre : le client n'envoie la photo suivante qu'une fois celle-ci
-      // traitée, ce qui borne la mémoire. Un échec n'annule pas l'upload (régénérée à la demande).
-      try {
-        await generateAndUploadThumb(buffer, thumbKey(photo), mimeType);
-      } catch (err) {
-        request.log.warn({ err, photoId: id }, 'thumbnail generation failed');
+        // Attendue avant de répondre : le client n'envoie la photo suivante qu'une fois celle-ci
+        // traitée, ce qui borne la mémoire. Un échec n'annule pas l'upload (régénérée à la demande).
+        try {
+          await generateAndUploadThumb(buffer, thumbKey(photo), mimeType);
+        } catch (err) {
+          request.log.warn({ err, photoId: id }, 'thumbnail generation failed');
+        }
       }
-    }
 
-    return reply.status(201).send({ photos: uploaded, skipped });
-  });
+      return reply.status(201).send({ photos: uploaded, skipped });
+    },
+  );
 
   // Admin: delete a photo
   app.delete<{ Params: { id: string } }>('/:id', { preHandler: [authenticate] }, async (request, reply) => {
@@ -218,7 +242,9 @@ export const photoRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Querystring: { albumId?: string } }>('/', { preHandler: [authenticate] }, async (request) => {
     const { albumId } = request.query;
     const photos = albumId
-      ? (db.prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order ASC, created_at ASC').all(albumId) as Photo[])
+      ? (db
+          .prepare('SELECT * FROM photos WHERE album_id = ? ORDER BY sort_order ASC, created_at ASC')
+          .all(albumId) as Photo[])
       : (db.prepare('SELECT * FROM photos ORDER BY created_at DESC').all() as Photo[]);
     return { photos };
   });

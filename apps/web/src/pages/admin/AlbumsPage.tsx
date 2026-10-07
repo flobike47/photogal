@@ -73,8 +73,7 @@ export function AlbumsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, values }: { id: string; values: AlbumForm }) =>
-      apiClient.put<Album>(`/albums/${id}`, values),
+    mutationFn: ({ id, values }: { id: string; values: AlbumForm }) => apiClient.put<Album>(`/albums/${id}`, values),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-albums'] });
       msg.success('Album mis à jour');
@@ -116,7 +115,7 @@ export function AlbumsPage() {
       qc.invalidateQueries({ queryKey: ['admin-albums'] });
       msg.success('Couverture mise à jour');
     } catch {
-      msg.error('Erreur lors de l\'upload');
+      msg.error("Erreur lors de l'upload");
     } finally {
       setCoverUploading(false);
     }
@@ -169,9 +168,7 @@ export function AlbumsPage() {
       title: 'Nom',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string, record: Album) => (
-        <Link to={`/admin/albums/${record.id}`}>{name}</Link>
-      ),
+      render: (name: string, record: Album) => <Link to={`/admin/albums/${record.id}`}>{name}</Link>,
     },
     {
       title: 'Photos',
@@ -187,9 +184,13 @@ export function AlbumsPage() {
       width: 110,
       render: (val: number) =>
         val ? (
-          <Tag icon={<EyeOutlined />} color="success">Public</Tag>
+          <Tag icon={<EyeOutlined />} color="success">
+            Public
+          </Tag>
         ) : (
-          <Tag icon={<EyeInvisibleOutlined />} color="default">Privé</Tag>
+          <Tag icon={<EyeInvisibleOutlined />} color="default">
+            Privé
+          </Tag>
         ),
     },
     {
@@ -246,7 +247,11 @@ export function AlbumsPage() {
 
   return (
     <Card
-      title={<Title level={4} style={{ margin: 0 }}>Albums</Title>}
+      title={
+        <Title level={4} style={{ margin: 0 }}>
+          Albums
+        </Title>
+      }
       extra={
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
           Nouvel album
@@ -263,9 +268,12 @@ export function AlbumsPage() {
       />
 
       <Modal
-        title={editing ? 'Modifier l\'album' : 'Nouvel album'}
+        title={editing ? "Modifier l'album" : 'Nouvel album'}
         open={modalOpen}
-        onCancel={() => { setModalOpen(false); setEditing(null); }}
+        onCancel={() => {
+          setModalOpen(false);
+          setEditing(null);
+        }}
         footer={null}
         destroyOnClose
       >
@@ -319,7 +327,11 @@ export function AlbumsPage() {
           <Form.Item
             name="password"
             label="Mot de passe d'accès (albums privés)"
-            extra={editing ? 'Laissez vide pour conserver le mot de passe actuel' : "Optionnel — permet l'accès depuis la page d'accueil sans connexion"}
+            extra={
+              editing
+                ? 'Laissez vide pour conserver le mot de passe actuel'
+                : "Optionnel — permet l'accès depuis la page d'accueil sans connexion"
+            }
           >
             <Input.Password
               placeholder={editing?.has_password ? 'Inchangé' : 'Laisser vide = pas de mot de passe'}
@@ -348,7 +360,14 @@ export function AlbumsPage() {
             <Button type="primary" htmlType="submit" loading={createMutation.isPending || updateMutation.isPending}>
               {editing ? 'Mettre à jour' : 'Créer'}
             </Button>
-            <Button onClick={() => { setModalOpen(false); setEditing(null); }}>Annuler</Button>
+            <Button
+              onClick={() => {
+                setModalOpen(false);
+                setEditing(null);
+              }}
+            >
+              Annuler
+            </Button>
           </Space>
         </Form>
       </Modal>

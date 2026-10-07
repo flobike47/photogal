@@ -1,21 +1,5 @@
-import {
-  Card,
-  Table,
-  Tag,
-  Button,
-  Popconfirm,
-  message,
-  Typography,
-  Space,
-  Drawer,
-  Divider,
-} from 'antd';
-import {
-  DeleteOutlined,
-  CheckOutlined,
-  MailOutlined,
-  EyeOutlined,
-} from '@ant-design/icons';
+import { Card, Table, Tag, Button, Popconfirm, message, Typography, Space, Drawer, Divider } from 'antd';
+import { DeleteOutlined, CheckOutlined, MailOutlined, EyeOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import dayjs from 'dayjs';
@@ -31,8 +15,7 @@ export function MessagesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['contact-messages'],
-    queryFn: () =>
-      apiClient.get<{ messages: ContactMessage[]; unread: number }>('/contact').then((r) => r.data),
+    queryFn: () => apiClient.get<{ messages: ContactMessage[]; unread: number }>('/contact').then((r) => r.data),
   });
 
   const markReadMutation = useMutation({
@@ -64,9 +47,7 @@ export function MessagesPage() {
       key: 'read',
       width: 8,
       render: (_: unknown, record: ContactMessage) =>
-        record.read === 0 ? (
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1677ff' }} />
-        ) : null,
+        record.read === 0 ? <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1677ff' }} /> : null,
     },
     {
       title: 'De',
@@ -74,7 +55,9 @@ export function MessagesPage() {
       render: (_: unknown, record: ContactMessage) => (
         <Space direction="vertical" size={0}>
           <Text strong={record.read === 0}>{record.name}</Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>{record.email}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.email}
+          </Text>
         </Space>
       ),
     },
@@ -83,7 +66,9 @@ export function MessagesPage() {
       dataIndex: 'message',
       key: 'message',
       render: (text: string) => (
-        <Text ellipsis style={{ maxWidth: 300, display: 'block' }}>{text}</Text>
+        <Text ellipsis style={{ maxWidth: 300, display: 'block' }}>
+          {text}
+        </Text>
       ),
     },
     {
@@ -99,9 +84,13 @@ export function MessagesPage() {
       width: 100,
       render: (_: unknown, record: ContactMessage) =>
         record.read ? (
-          <Tag icon={<CheckOutlined />} color="default">Lu</Tag>
+          <Tag icon={<CheckOutlined />} color="default">
+            Lu
+          </Tag>
         ) : (
-          <Tag icon={<MailOutlined />} color="blue">Non lu</Tag>
+          <Tag icon={<MailOutlined />} color="blue">
+            Non lu
+          </Tag>
         ),
     },
     {
@@ -131,10 +120,10 @@ export function MessagesPage() {
     <Card
       title={
         <Space>
-          <Title level={4} style={{ margin: 0 }}>Messages de contact</Title>
-          {(data?.unread ?? 0) > 0 && (
-            <Tag color="blue">{data?.unread} non lu(s)</Tag>
-          )}
+          <Title level={4} style={{ margin: 0 }}>
+            Messages de contact
+          </Title>
+          {(data?.unread ?? 0) > 0 && <Tag color="blue">{data?.unread} non lu(s)</Tag>}
         </Space>
       }
     >
@@ -165,7 +154,9 @@ export function MessagesPage() {
               okType="danger"
               cancelText="Annuler"
             >
-              <Button danger size="small" icon={<DeleteOutlined />}>Supprimer</Button>
+              <Button danger size="small" icon={<DeleteOutlined />}>
+                Supprimer
+              </Button>
             </Popconfirm>
           )
         }
@@ -175,7 +166,9 @@ export function MessagesPage() {
             <Space direction="vertical" style={{ width: '100%' }}>
               <div>
                 <Text type="secondary">Nom</Text>
-                <div><Text strong>{selected.name}</Text></div>
+                <div>
+                  <Text strong>{selected.name}</Text>
+                </div>
               </div>
               <div>
                 <Text type="secondary">Email</Text>
@@ -185,7 +178,9 @@ export function MessagesPage() {
               </div>
               <div>
                 <Text type="secondary">Reçu le</Text>
-                <div><Text>{dayjs(selected.created_at).format('DD/MM/YYYY à HH:mm')}</Text></div>
+                <div>
+                  <Text>{dayjs(selected.created_at).format('DD/MM/YYYY à HH:mm')}</Text>
+                </div>
               </div>
             </Space>
             <Divider />

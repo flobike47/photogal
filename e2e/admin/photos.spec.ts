@@ -7,11 +7,20 @@ import { fixture, HEIC_FIXTURE, imageSize } from '../helpers/files';
 test.use(adminState);
 test.afterAll(reseed);
 
-interface Photo { id: string; filename: string; original_name: string; mime_type: string; share_token: string }
+interface Photo {
+  id: string;
+  filename: string;
+  original_name: string;
+  mime_type: string;
+  share_token: string;
+}
 
 const cards = (page: Page) => page.locator('.ant-card-body [style*="grid"] > div');
 const card = (page: Page, name: string) => cards(page).filter({ hasText: name });
-const names = (page: Page) => cards(page).locator('img').evaluateAll((imgs) => imgs.map((i) => i.getAttribute('alt')));
+const names = (page: Page) =>
+  cards(page)
+    .locator('img')
+    .evaluateAll((imgs) => imgs.map((i) => i.getAttribute('alt')));
 const albumPhotos = async (api: APIRequestContext, albumId: string) =>
   ((await (await api.get(`/api/albums/${albumId}/photos`)).json()) as { photos: Photo[] }).photos;
 
@@ -22,8 +31,8 @@ async function upload(page: Page, file: string) {
 }
 
 // A11 → A17
-test.describe('A11 — Photos d\'un album', () => {
-  test('affiche le nom, la description, le compteur et les photos dans l\'ordre', async ({ page }) => {
+test.describe("A11 — Photos d'un album", () => {
+  test("affiche le nom, la description, le compteur et les photos dans l'ordre", async ({ page }) => {
     await page.goto('/admin/albums/album-mariage');
     await expect(page.locator('.ant-card-head')).toContainText('Mariage Julie & Thomas');
     await expect(page.locator('.ant-card-head .ant-badge-count')).toHaveText('40');
@@ -32,7 +41,7 @@ test.describe('A11 — Photos d\'un album', () => {
     expect((await names(page)).slice(0, 3)).toEqual(['IMG_01.jpg', 'IMG_02.jpg', 'IMG_03.jpg']);
   });
 
-  test('un album vide affiche un message d\'aide', async ({ page }) => {
+  test("un album vide affiche un message d'aide", async ({ page }) => {
     await page.goto('/admin/albums/album-vide');
     await expect(page.getByText('Aucune photo. Utilisez le bouton ci-dessus pour en ajouter.')).toBeVisible();
   });
@@ -42,7 +51,7 @@ test.describe('A11 — Photos d\'un album', () => {
     await expect(page.getByText('Album introuvable')).toBeVisible();
   });
 
-  test('le fil d\'Ariane ramène à la liste', async ({ page }) => {
+  test("le fil d'Ariane ramène à la liste", async ({ page }) => {
     await page.goto('/admin/albums/album-mariage');
     await page.locator('.ant-breadcrumb').getByRole('link', { name: 'Albums' }).click();
     await expect(page).toHaveURL('/admin/albums');
@@ -67,7 +76,7 @@ test.describe('A12 — Upload de photos', () => {
     expect(height).toBeGreaterThan(width);
   });
 
-  test('un HEIC est converti en JPEG à l\'upload', async ({ page, adminApi }) => {
+  test("un HEIC est converti en JPEG à l'upload", async ({ page, adminApi }) => {
     await page.goto('/admin/albums/album-vide');
     const { photos } = await upload(page, HEIC_FIXTURE);
     expect(photos[0]).toMatchObject({ original_name: 'sample.jpg', mime_type: 'image/jpeg' });
@@ -81,15 +90,22 @@ test.describe('A12 — Upload de photos', () => {
 });
 
 test.describe('A12b — Upload en masse', () => {
-  test('30 photos partent 3 par 3, la grille n\'est rechargée qu\'au fil des lots, toutes ont leur miniature', async ({ page, adminApi }) => {
+  test("30 photos partent 3 par 3, la grille n'est rechargée qu'au fil des lots, toutes ont leur miniature", async ({
+    page,
+    adminApi,
+  }) => {
     test.setTimeout(120_000);
-    const files = await Promise.all(Array.from({ length: 30 }, async (_, i) => ({
-      name: `lot_${String(i + 1).padStart(2, '0')}.jpg`,
-      mimeType: 'image/jpeg',
-      buffer: await sharp({ create: { width: 1600, height: 1200, channels: 3, background: { r: 40 + i * 5, g: 90, b: 140 } } })
-        .jpeg()
-        .toBuffer(),
-    })));
+    const files = await Promise.all(
+      Array.from({ length: 30 }, async (_, i) => ({
+        name: `lot_${String(i + 1).padStart(2, '0')}.jpg`,
+        mimeType: 'image/jpeg',
+        buffer: await sharp({
+          create: { width: 1600, height: 1200, channels: 3, background: { r: 40 + i * 5, g: 90, b: 140 } },
+        })
+          .jpeg()
+          .toBuffer(),
+      })),
+    );
 
     const isUpload = (r: Request) => r.url().includes('/api/photos/upload/') && r.method() === 'POST';
     // Intervalles mesurés par le navigateur : l'ordre d'arrivée des événements côté test n'est pas fiable
@@ -117,7 +133,9 @@ test.describe('A12b — Upload en masse', () => {
     await expect(page.getByTestId('upload-progress')).toBeHidden();
 
     expect(uploads).toHaveLength(30);
-    const maxInFlight = Math.max(...uploads.map((u) => uploads.filter((o) => o.start <= u.start && u.start < o.end).length));
+    const maxInFlight = Math.max(
+      ...uploads.map((u) => uploads.filter((o) => o.start <= u.start && u.start < o.end).length),
+    );
     expect(maxInFlight).toBeLessThanOrEqual(3);
     // Un rafraîchissement intermédiaire (20 photos) et un final, au lieu d'un par photo
     expect(listFetches - fetchesBefore).toBeLessThanOrEqual(3);
@@ -133,7 +151,7 @@ test.describe('A12b — Upload en masse', () => {
 });
 
 test.describe('A13 — Fichier refusé', () => {
-  test('un fichier qui n\'est pas une image est signalé et ignoré', async ({ page }) => {
+  test("un fichier qui n'est pas une image est signalé et ignoré", async ({ page }) => {
     await page.goto('/admin/albums/album-mariage');
     await expect(cards(page)).toHaveCount(40);
     const { photos, skipped } = await upload(page, fixture('notes.txt'));
@@ -151,7 +169,7 @@ test.describe('A14 — Photo de couverture', () => {
     await expect(cards(page).first().getByText('Couverture', { exact: true })).toBeVisible();
   });
 
-  test('définir une autre photo comme couverture met à jour l\'admin et l\'accueil', async ({ page, adminApi }) => {
+  test("définir une autre photo comme couverture met à jour l'admin et l'accueil", async ({ page, adminApi }) => {
     const target = (await albumPhotos(adminApi, 'album-portfolio-portraits'))[2];
     await page.goto('/admin/albums/album-portfolio-portraits');
     await card(page, target.original_name).locator('button:has(.anticon-star)').click();
@@ -160,8 +178,9 @@ test.describe('A14 — Photo de couverture', () => {
     await expect(page.getByText('Couverture', { exact: true })).toHaveCount(1);
 
     await page.goto('/');
-    await expect(page.locator('#galleries .pg-album-card').filter({ hasText: 'Portraits' }).locator('img'))
-      .toHaveAttribute('src', new RegExp(`/api/photos/${target.id}/thumb`));
+    await expect(
+      page.locator('#galleries .pg-album-card').filter({ hasText: 'Portraits' }).locator('img'),
+    ).toHaveAttribute('src', new RegExp(`/api/photos/${target.id}/thumb`));
   });
 });
 
@@ -189,13 +208,15 @@ test.describe('A15 — Réordonner par glisser-déposer', () => {
     expect((await names(page)).slice(0, 3)).toEqual(expected);
 
     await page.goto('/share/demo-portraits');
-    const publicNames = await page.locator('.pg-photo-card img').evaluateAll((imgs) => imgs.map((i) => i.getAttribute('alt')));
+    const publicNames = await page
+      .locator('.pg-photo-card img')
+      .evaluateAll((imgs) => imgs.map((i) => i.getAttribute('alt')));
     expect(publicNames.slice(0, 3)).toEqual(expected);
   });
 });
 
-test.describe('A16 — Lien de téléchargement d\'une photo', () => {
-  test('copie un lien direct qui télécharge l\'original', async ({ page, readClipboard, request }) => {
+test.describe("A16 — Lien de téléchargement d'une photo", () => {
+  test("copie un lien direct qui télécharge l'original", async ({ page, readClipboard, request }) => {
     await page.goto('/admin/albums/album-mariage');
     await card(page, 'IMG_05.jpg').locator('button:has(.anticon-copy)').click();
     await expect(page.getByText('Lien copié', { exact: true })).toBeVisible();

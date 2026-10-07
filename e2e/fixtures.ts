@@ -22,9 +22,13 @@ export const test = base.extend<Fixtures>({
     await use(async (email: string) => {
       await context.addCookies([{ name: SESSION_COOKIE, value: signVisitorToken(email), url: baseURL! }]);
       await context.addInitScript((e) => {
-        sessionStorage.setItem('photogal-auth', JSON.stringify({
-          state: { email: e, isAuthenticated: true, isAdmin: false }, version: 0,
-        }));
+        sessionStorage.setItem(
+          'photogal-auth',
+          JSON.stringify({
+            state: { email: e, isAuthenticated: true, isAdmin: false },
+            version: 0,
+          }),
+        );
       }, email);
     });
   },

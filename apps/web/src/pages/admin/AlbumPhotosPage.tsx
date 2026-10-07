@@ -24,20 +24,8 @@ import {
   CopyOutlined,
   HolderOutlined,
 } from '@ant-design/icons';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  rectSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
@@ -134,11 +122,7 @@ function SortablePhotoCard({ photo, isCover, onSetCover, onDelete, onCopyLink }:
             />
           </Tooltip>
           <Tooltip title="Copier le lien de téléchargement">
-            <Button
-              size="small"
-              icon={<CopyOutlined />}
-              onClick={() => onCopyLink(photo.share_token)}
-            />
+            <Button size="small" icon={<CopyOutlined />} onClick={() => onCopyLink(photo.share_token)} />
           </Tooltip>
           <Tooltip title="Supprimer">
             <Popconfirm
@@ -173,8 +157,7 @@ export function AlbumPhotosPage() {
 
   const { data: photosData, isLoading: loadingPhotos } = useQuery({
     queryKey: ['admin-album-photos', id],
-    queryFn: () =>
-      apiClient.get<{ photos: Photo[] }>(`/albums/${id}/photos`).then((r) => r.data),
+    queryFn: () => apiClient.get<{ photos: Photo[] }>(`/albums/${id}/photos`).then((r) => r.data),
     enabled: !!id,
   });
 
@@ -192,8 +175,7 @@ export function AlbumPhotosPage() {
   });
 
   const setCoverMutation = useMutation({
-    mutationFn: (photo: Photo) =>
-      apiClient.put(`/albums/${photo.album_id}`, { cover_photo_id: photo.filename }),
+    mutationFn: (photo: Photo) => apiClient.put(`/albums/${photo.album_id}`, { cover_photo_id: photo.filename }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-album', id] });
       msg.success('Photo de couverture définie');
@@ -201,27 +183,31 @@ export function AlbumPhotosPage() {
   });
 
   const reorderMutation = useMutation({
-    mutationFn: (photoIds: string[]) =>
-      apiClient.put('/photos/reorder', { albumId: id, photoIds }),
+    mutationFn: (photoIds: string[]) => apiClient.put('/photos/reorder', { albumId: id, photoIds }),
     onError: () => {
-      msg.error('Erreur lors de la sauvegarde de l\'ordre');
+      msg.error("Erreur lors de la sauvegarde de l'ordre");
       setLocalPhotos(photosData?.photos ?? null);
     },
   });
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id || !localPhotos) return;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id || !localPhotos) return;
 
-    const oldIndex = localPhotos.findIndex((p) => p.id === active.id);
-    const newIndex = localPhotos.findIndex((p) => p.id === over.id);
-    const reordered = arrayMove(localPhotos, oldIndex, newIndex);
-    setLocalPhotos(reordered);
-    reorderMutation.mutate(reordered.map((p) => p.id));
-  }, [localPhotos, reorderMutation]);
+      const oldIndex = localPhotos.findIndex((p) => p.id === active.id);
+      const newIndex = localPhotos.findIndex((p) => p.id === over.id);
+      const reordered = arrayMove(localPhotos, oldIndex, newIndex);
+      setLocalPhotos(reordered);
+      reorderMutation.mutate(reordered.map((p) => p.id));
+    },
+    [localPhotos, reorderMutation],
+  );
 
   const batch = useRef({ total: 0, done: 0, failed: 0, skipped: [] as string[] });
-  const [progress, setProgress] = useState<{ done: number; total: number; failed: number; skipped: number } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number; failed: number; skipped: number } | null>(
+    null,
+  );
   const showProgress = () => {
     const b = batch.current;
     setProgress({ done: b.done, total: b.total, failed: b.failed, skipped: b.skipped.length });
@@ -306,10 +292,7 @@ export function AlbumPhotosPage() {
       {contextHolder}
       <Breadcrumb
         style={{ marginBottom: 16 }}
-        items={[
-          { title: <Link to="/admin/albums">Albums</Link> },
-          { title: albumData.name },
-        ]}
+        items={[{ title: <Link to="/admin/albums">Albums</Link> }, { title: albumData.name }]}
       />
 
       <Card
@@ -318,7 +301,9 @@ export function AlbumPhotosPage() {
             <Link to="/admin/albums">
               <Button type="text" icon={<ArrowLeftOutlined />} size="small" />
             </Link>
-            <Title level={4} style={{ margin: 0 }}>{albumData.name}</Title>
+            <Title level={4} style={{ margin: 0 }}>
+              {albumData.name}
+            </Title>
             <Badge count={photos.length} showZero color="blue" />
           </Space>
         }
@@ -338,10 +323,18 @@ export function AlbumPhotosPage() {
         {progress && (
           <div
             data-testid="upload-progress"
-            style={{ marginBottom: 16, padding: '12px 16px', border: '1px solid #91caff', borderRadius: 8, background: '#e6f4ff' }}
+            style={{
+              marginBottom: 16,
+              padding: '12px 16px',
+              border: '1px solid #91caff',
+              borderRadius: 8,
+              background: '#e6f4ff',
+            }}
           >
             <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
-              <Text strong>Envoi des photos — {progress.done} / {progress.total}</Text>
+              <Text strong>
+                Envoi des photos — {progress.done} / {progress.total}
+              </Text>
               <Space size={12}>
                 {progress.skipped > 0 && (
                   <Text type="warning">
@@ -379,7 +372,9 @@ export function AlbumPhotosPage() {
             <Image.PreviewGroup>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={photos.map((p) => p.id)} strategy={rectSortingStrategy}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
+                  <div
+                    style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}
+                  >
                     {photos.map((photo) => (
                       <SortablePhotoCard
                         key={photo.id}

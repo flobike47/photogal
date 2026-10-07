@@ -89,12 +89,36 @@ export const defaultConfig: Record<string, string> = {
   contact_bg_url: '',
 };
 
-try { db.exec('ALTER TABLE admin_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
-try { db.exec('ALTER TABLE albums ADD COLUMN is_downloadable INTEGER NOT NULL DEFAULT 1'); } catch { /* already exists */ }
-try { db.exec('ALTER TABLE albums ADD COLUMN is_portfolio INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
-try { db.exec('ALTER TABLE albums ADD COLUMN password_hash TEXT'); } catch { /* already exists */ }
-try { db.exec('ALTER TABLE albums ADD COLUMN cover_url TEXT'); } catch { /* already exists */ }
-try { db.exec('ALTER TABLE photos ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
+try {
+  db.exec('ALTER TABLE admin_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0');
+} catch {
+  /* already exists */
+}
+try {
+  db.exec('ALTER TABLE albums ADD COLUMN is_downloadable INTEGER NOT NULL DEFAULT 1');
+} catch {
+  /* already exists */
+}
+try {
+  db.exec('ALTER TABLE albums ADD COLUMN is_portfolio INTEGER NOT NULL DEFAULT 0');
+} catch {
+  /* already exists */
+}
+try {
+  db.exec('ALTER TABLE albums ADD COLUMN password_hash TEXT');
+} catch {
+  /* already exists */
+}
+try {
+  db.exec('ALTER TABLE albums ADD COLUMN cover_url TEXT');
+} catch {
+  /* already exists */
+}
+try {
+  db.exec('ALTER TABLE photos ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+} catch {
+  /* already exists */
+}
 // Populate sort_order for existing photos (once, safe to re-run)
 db.exec(`
   UPDATE photos SET sort_order = (
@@ -102,7 +126,6 @@ db.exec(`
     WHERE p2.album_id = photos.album_id AND p2.created_at <= photos.created_at AND p2.id <= photos.id
   ) WHERE sort_order = 0
 `);
-
 
 const insertConfig = db.prepare('INSERT OR IGNORE INTO site_config (key, value) VALUES (?, ?)');
 for (const [key, value] of Object.entries(defaultConfig)) {

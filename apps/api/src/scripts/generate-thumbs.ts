@@ -22,7 +22,7 @@ let failed = 0;
 for (const photo of photos) {
   const tKey = thumbKey(photo);
 
-  if (!force && await exists(tKey)) {
+  if (!force && (await exists(tKey))) {
     skipped++;
     continue;
   }

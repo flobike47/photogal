@@ -19,7 +19,7 @@ export const s3 = new S3Client({
   },
   forcePathStyle: true,
   requestHandler: {
-    requestTimeout: 10_000,   // abandon si MinIO ne répond pas en 10s
+    requestTimeout: 10_000, // abandon si MinIO ne répond pas en 10s
     connectionTimeout: 5_000, // abandon si la connexion TCP prend plus de 5s
     httpAgent: new Agent({ keepAlive: true, maxSockets: 50 }),
     socketAcquisitionWarningTimeout: 5_000, // log si toutes les connexions vers MinIO restent occupées
@@ -63,7 +63,9 @@ export async function downloadBuffer(key: string): Promise<Buffer> {
 export async function remove(key: string): Promise<void> {
   try {
     await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
-  } catch { /* already gone */ }
+  } catch {
+    /* already gone */
+  }
 }
 
 export async function exists(key: string): Promise<boolean> {

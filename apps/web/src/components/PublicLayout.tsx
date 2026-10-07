@@ -27,10 +27,7 @@ export function PublicLayout() {
   useEffect(() => {
     const el = document.getElementById('albums');
     if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setAlbumsVisible(entry.isIntersecting),
-      { threshold: 0.15 }
-    );
+    const observer = new IntersectionObserver(([entry]) => setAlbumsVisible(entry.isIntersecting), { threshold: 0.15 });
     observer.observe(el);
     return () => observer.disconnect();
   }, [location.pathname]);
@@ -53,7 +50,9 @@ export function PublicLayout() {
   const headerDark = isHome || isDark;
 
   // Close menu on route change
-  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -64,18 +63,25 @@ export function PublicLayout() {
   // Lock body scroll when menu is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [menuOpen]);
 
-  const handleGoogleCredential = useCallback(async (response: { credential: string }) => {
-    try {
-      const res = await apiClient.post<{ email: string; isAdmin: boolean }>('/auth/google', {
-        credential: response.credential,
-      });
-      setAuth(res.data.email, res.data.isAdmin);
-      setMenuOpen(false);
-    } catch { /* silently ignore */ }
-  }, [setAuth]);
+  const handleGoogleCredential = useCallback(
+    async (response: { credential: string }) => {
+      try {
+        const res = await apiClient.post<{ email: string; isAdmin: boolean }>('/auth/google', {
+          credential: response.credential,
+        });
+        setAuth(res.data.email, res.data.isAdmin);
+        setMenuOpen(false);
+      } catch {
+        /* silently ignore */
+      }
+    },
+    [setAuth],
+  );
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || googleReady.current) return;
@@ -95,10 +101,16 @@ export function PublicLayout() {
       });
     };
 
-    if (window.google) { init(); return; }
+    if (window.google) {
+      init();
+      return;
+    }
 
     const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    if (existing) { existing.addEventListener('load', init); return; }
+    if (existing) {
+      existing.addEventListener('load', init);
+      return;
+    }
 
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -117,7 +129,7 @@ export function PublicLayout() {
   };
 
   const navLinkStyle = (active: boolean) => ({
-    color: headerDark ? (active ? '#fff' : 'rgba(255,255,255,0.55)') : (active ? '#111' : 'rgba(0,0,0,0.55)'),
+    color: headerDark ? (active ? '#fff' : 'rgba(255,255,255,0.55)') : active ? '#111' : 'rgba(0,0,0,0.55)',
     textDecoration: 'none',
     fontSize: 11,
     letterSpacing: '0.18em',
@@ -137,7 +149,9 @@ export function PublicLayout() {
       <header
         style={{
           position: 'fixed',
-          top: 0, left: 0, right: 0,
+          top: 0,
+          left: 0,
+          right: 0,
           zIndex: 1000,
           height: 72,
           display: 'flex',
@@ -145,12 +159,12 @@ export function PublicLayout() {
           justifyContent: 'space-between',
           padding: isMobile ? '0 20px' : '0 48px',
           transition: 'background 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease',
-          background: headerSolid
-            ? (headerDark ? 'rgba(10,10,10,0.95)' : 'rgba(255,255,255,0.96)')
-            : 'transparent',
+          background: headerSolid ? (headerDark ? 'rgba(10,10,10,0.95)' : 'rgba(255,255,255,0.96)') : 'transparent',
           backdropFilter: headerSolid ? 'blur(16px)' : 'none',
           borderBottom: headerSolid
-            ? (headerDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.07)')
+            ? headerDark
+              ? '1px solid rgba(255,255,255,0.07)'
+              : '1px solid rgba(0,0,0,0.07)'
             : '1px solid transparent',
         }}
       >
@@ -160,13 +174,28 @@ export function PublicLayout() {
             <img src={config.logo_url} alt="logo" style={{ height: 36, objectFit: 'contain' }} />
           ) : (
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ flexShrink: 0 }}>
-              <circle cx="14" cy="14" r="13" stroke={headerDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'} strokeWidth="1.5" />
-              <circle cx="14" cy="14" r="6" stroke={headerDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'} strokeWidth="1.5" />
+              <circle
+                cx="14"
+                cy="14"
+                r="13"
+                stroke={headerDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'}
+                strokeWidth="1.5"
+              />
+              <circle
+                cx="14"
+                cy="14"
+                r="6"
+                stroke={headerDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'}
+                strokeWidth="1.5"
+              />
               <circle cx="14" cy="14" r="2" fill={headerDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'} />
             </svg>
           )}
           {!isMobile && (
-            <span className="pg-heading" style={{ color: headerDark ? '#fff' : '#111', fontSize: 20, fontWeight: 300, letterSpacing: '0.12em' }}>
+            <span
+              className="pg-heading"
+              style={{ color: headerDark ? '#fff' : '#111', fontSize: 20, fontWeight: 300, letterSpacing: '0.12em' }}
+            >
               {config.site_name}
             </span>
           )}
@@ -176,18 +205,53 @@ export function PublicLayout() {
         {!isMobile && (
           <nav style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
             <button
-              onClick={() => { navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, ...navLinkStyle(isHome && !albumsVisible) }}
+              onClick={() => {
+                navigate('/');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                ...navLinkStyle(isHome && !albumsVisible),
+              }}
             >
               Accueil
             </button>
-            <button onClick={scrollToAlbums} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, ...navLinkStyle(albumsVisible) }}>Galerie</button>
-            <Link to="/contact" style={navLinkStyle(location.pathname === '/contact')}>Contact</Link>
+            <button
+              onClick={scrollToAlbums}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                ...navLinkStyle(albumsVisible),
+              }}
+            >
+              Galerie
+            </button>
+            <Link to="/contact" style={navLinkStyle(location.pathname === '/contact')}>
+              Contact
+            </Link>
             {isAuthenticated && isAdmin && (
-              <Link to="/admin" style={navLinkStyle(false)}>Admin</Link>
+              <Link to="/admin" style={navLinkStyle(false)}>
+                Admin
+              </Link>
             )}
             {isAuthenticated ? (
-              <button onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', color: headerDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)', fontSize: 20, lineHeight: 1, padding: 0 }}>
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: headerDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+                  fontSize: 20,
+                  lineHeight: 1,
+                  padding: 0,
+                }}
+              >
                 ×
               </button>
             ) : (
@@ -200,7 +264,15 @@ export function PublicLayout() {
         {isMobile && (
           <button
             onClick={() => setMenuOpen((o) => !o)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', flexDirection: 'column', gap: 5 }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 5,
+            }}
             aria-label="Menu"
           >
             {[0, 1, 2].map((i) => (
@@ -213,7 +285,11 @@ export function PublicLayout() {
                   background: headerDark ? '#fff' : '#111',
                   transition: 'transform 0.3s, opacity 0.3s',
                   transform: menuOpen
-                    ? i === 0 ? 'translateY(6.5px) rotate(45deg)' : i === 2 ? 'translateY(-6.5px) rotate(-45deg)' : 'none'
+                    ? i === 0
+                      ? 'translateY(6.5px) rotate(45deg)'
+                      : i === 2
+                        ? 'translateY(-6.5px) rotate(-45deg)'
+                        : 'none'
                     : 'none',
                   opacity: menuOpen && i === 1 ? 0 : 1,
                 }}
@@ -243,8 +319,24 @@ export function PublicLayout() {
           }}
         >
           <button
-            onClick={() => { setMenuOpen(false); navigate('/'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 28, fontWeight: 300, letterSpacing: '0.12em', fontFamily: 'inherit', padding: 0, borderBottom: (isHome && !albumsVisible) ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent', paddingBottom: 4 }}
+            onClick={() => {
+              setMenuOpen(false);
+              navigate('/');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#fff',
+              fontSize: 28,
+              fontWeight: 300,
+              letterSpacing: '0.12em',
+              fontFamily: 'inherit',
+              padding: 0,
+              borderBottom: isHome && !albumsVisible ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent',
+              paddingBottom: 4,
+            }}
             className="pg-heading"
           >
             Accueil
@@ -265,7 +357,19 @@ export function PublicLayout() {
           ))}
           <button
             onClick={scrollToAlbums}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 28, fontWeight: 300, letterSpacing: '0.12em', fontFamily: 'inherit', padding: 0, borderBottom: albumsVisible ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent', paddingBottom: 4 }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#fff',
+              fontSize: 28,
+              fontWeight: 300,
+              letterSpacing: '0.12em',
+              fontFamily: 'inherit',
+              padding: 0,
+              borderBottom: albumsVisible ? '1px solid rgba(255,255,255,0.5)' : '1px solid transparent',
+              paddingBottom: 4,
+            }}
             className="pg-heading"
           >
             Galerie
@@ -274,7 +378,18 @@ export function PublicLayout() {
           {isAuthenticated ? (
             <button
               onClick={handleLogout}
-              style={{ background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: '10px 28px', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 16, fontFamily: 'Inter, sans-serif' }}
+              style={{
+                background: 'none',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: 'rgba(255,255,255,0.5)',
+                cursor: 'pointer',
+                padding: '10px 28px',
+                fontSize: 11,
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                marginTop: 16,
+                fontFamily: 'Inter, sans-serif',
+              }}
             >
               Se déconnecter
             </button>
@@ -293,9 +408,27 @@ export function PublicLayout() {
 
       {/* ── Footer ── */}
       <footer style={{ background: '#141414', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ padding: isMobile ? '48px 24px 32px' : '52px 48px 32px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 40 }}>
+        <div
+          style={{
+            padding: isMobile ? '48px 24px 32px' : '52px 48px 32px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 40,
+          }}
+        >
           <div style={{ maxWidth: 280 }}>
-            <span className="pg-heading" style={{ color: '#fff', fontSize: 22, fontWeight: 300, letterSpacing: '0.1em', display: 'block', marginBottom: 12 }}>
+            <span
+              className="pg-heading"
+              style={{
+                color: '#fff',
+                fontSize: 22,
+                fontWeight: 300,
+                letterSpacing: '0.1em',
+                display: 'block',
+                marginBottom: 12,
+              }}
+            >
               {config.site_name}
             </span>
             {config.site_description && (
@@ -308,29 +441,108 @@ export function PublicLayout() {
           </div>
 
           <div>
-            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 16px', fontFamily: 'Inter, sans-serif' }}>Navigation</p>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.2)',
+                fontSize: 9,
+                letterSpacing: '0.3em',
+                textTransform: 'uppercase',
+                margin: '0 0 16px',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            >
+              Navigation
+            </p>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Link to="/" className="pg-nav-link" style={{ fontSize: 12 }}>Accueil</Link>
-              <Link to="/contact" className="pg-nav-link" style={{ fontSize: 12 }}>Contact</Link>
+              <Link to="/" className="pg-nav-link" style={{ fontSize: 12 }}>
+                Accueil
+              </Link>
+              <Link to="/contact" className="pg-nav-link" style={{ fontSize: 12 }}>
+                Contact
+              </Link>
             </nav>
           </div>
 
           {(config.social_instagram || config.social_facebook || config.social_pinterest || config.social_website) && (
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 16px', fontFamily: 'Inter, sans-serif' }}>Réseaux</p>
+              <p
+                style={{
+                  color: 'rgba(255,255,255,0.2)',
+                  fontSize: 9,
+                  letterSpacing: '0.3em',
+                  textTransform: 'uppercase',
+                  margin: '0 0 16px',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                Réseaux
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {config.social_instagram && <a href={ensureUrl(config.social_instagram)} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Instagram</a>}
-                {config.social_facebook && <a href={ensureUrl(config.social_facebook)} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Facebook</a>}
-                {config.social_pinterest && <a href={ensureUrl(config.social_pinterest)} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Pinterest</a>}
-                {config.social_website && <a href={ensureUrl(config.social_website)} target="_blank" rel="noopener noreferrer" className="pg-nav-link" style={{ fontSize: 12 }}>Site web</a>}
+                {config.social_instagram && (
+                  <a
+                    href={ensureUrl(config.social_instagram)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pg-nav-link"
+                    style={{ fontSize: 12 }}
+                  >
+                    Instagram
+                  </a>
+                )}
+                {config.social_facebook && (
+                  <a
+                    href={ensureUrl(config.social_facebook)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pg-nav-link"
+                    style={{ fontSize: 12 }}
+                  >
+                    Facebook
+                  </a>
+                )}
+                {config.social_pinterest && (
+                  <a
+                    href={ensureUrl(config.social_pinterest)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pg-nav-link"
+                    style={{ fontSize: 12 }}
+                  >
+                    Pinterest
+                  </a>
+                )}
+                {config.social_website && (
+                  <a
+                    href={ensureUrl(config.social_website)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pg-nav-link"
+                    style={{ fontSize: 12 }}
+                  >
+                    Site web
+                  </a>
+                )}
               </div>
             </div>
           )}
 
           {config.contact_email && (
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 16px', fontFamily: 'Inter, sans-serif' }}>Contact</p>
-              <a href={`mailto:${config.contact_email}`} className="pg-nav-link" style={{ fontSize: 12 }}>{config.contact_email}</a>
+              <p
+                style={{
+                  color: 'rgba(255,255,255,0.2)',
+                  fontSize: 9,
+                  letterSpacing: '0.3em',
+                  textTransform: 'uppercase',
+                  margin: '0 0 16px',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
+                Contact
+              </p>
+              <a href={`mailto:${config.contact_email}`} className="pg-nav-link" style={{ fontSize: 12 }}>
+                {config.contact_email}
+              </a>
             </div>
           )}
         </div>
@@ -338,7 +550,12 @@ export function PublicLayout() {
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: isMobile ? '16px 24px' : '16px 48px' }}>
           <div
             dangerouslySetInnerHTML={{ __html: config.footer_text }}
-            style={{ color: 'rgba(255,255,255,0.18)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}
+            style={{
+              color: 'rgba(255,255,255,0.18)',
+              fontSize: 11,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
             className="pg-rich-text"
           />
         </div>

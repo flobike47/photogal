@@ -14,7 +14,7 @@ test.describe('A1 — Accès protégé', () => {
 test.describe('A2 — Session admin', () => {
   test.use(adminState);
 
-  test('/admin ouvre la liste des albums avec l\'email, les messages non lus et le stockage', async ({ page }) => {
+  test("/admin ouvre la liste des albums avec l'email, les messages non lus et le stockage", async ({ page }) => {
     await page.goto('/admin');
     await expect(page).toHaveURL('/admin/albums');
     await expect(page.locator('.ant-layout-header')).toContainText(ADMIN_EMAIL);

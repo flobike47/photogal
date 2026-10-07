@@ -12,7 +12,9 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     if (isAdmin) return;
     apiClient
       .get<{ user: { email: string } }>('/auth/me')
-      .then((res) => { setAuth(res.data.user.email, true); })
+      .then((res) => {
+        setAuth(res.data.user.email, true);
+      })
       .catch(() => {})
       .finally(() => setChecking(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
