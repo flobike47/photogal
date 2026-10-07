@@ -133,8 +133,11 @@ test.describe('A12b — Upload en masse', () => {
     await expect(page.getByTestId('upload-progress')).toBeHidden();
 
     expect(uploads).toHaveLength(30);
+    // Les horodatages réseau de Chromium décalent la fin d'une requête de 1 à 40 ms après le départ de
+    // la suivante : sans tolérance, chaque passage de relais compte comme un chevauchement
+    const CLOCK_SKEW_MS = 50;
     const maxInFlight = Math.max(
-      ...uploads.map((u) => uploads.filter((o) => o.start <= u.start && u.start < o.end).length),
+      ...uploads.map((u) => uploads.filter((o) => o.start <= u.start && u.start < o.end - CLOCK_SKEW_MS).length),
     );
     expect(maxInFlight).toBeLessThanOrEqual(3);
     // Un rafraîchissement intermédiaire (20 photos) et un final, au lieu d'un par photo
