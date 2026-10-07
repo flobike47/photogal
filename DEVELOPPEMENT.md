@@ -13,6 +13,9 @@
 | `npm run dev` | Lance l'API (`:3001`) et le front (`:5173`) en hot reload |
 | `npm run dev:fresh` | `seed` puis `dev` |
 | `npm run dev:infra:down` | Arrête MinIO. Les données restent dans le volume `minio_dev` |
+| `npm run check` | Typecheck + lint + format + tests unitaires API : ce que la CI lance sur chaque PR |
+| `npm run lint` / `npm run format` | ESLint / Prettier (réécrit les fichiers) |
+| `npm test` | Tests unitaires de l'API (Vitest, `apps/api/test/`, SQLite en mémoire, sans MinIO, < 1 s) |
 
 Tu peux relancer le seed pendant que l'API tourne. Il refuse de s'exécuter si `NODE_ENV=production`, si `S3_ENDPOINT` n'est pas local, ou si `S3_BUCKET` ne finit pas par `-dev`.
 
