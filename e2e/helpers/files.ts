@@ -16,7 +16,10 @@ export function zipEntries(zip: Buffer): string[] {
   const EOCD = 0x06054b50;
   let eocd = -1;
   for (let i = zip.length - 22; i >= Math.max(0, zip.length - 65_557); i--) {
-    if (zip.readUInt32LE(i) === EOCD) { eocd = i; break; }
+    if (zip.readUInt32LE(i) === EOCD) {
+      eocd = i;
+      break;
+    }
   }
   if (eocd < 0) throw new Error('Archive ZIP invalide (EOCD introuvable)');
   const count = zip.readUInt16LE(eocd + 10);

@@ -19,7 +19,7 @@ test.describe('V13 — Album privé protégé par mot de passe', () => {
     await expect(page).toHaveURL('/');
   });
 
-  test('un mauvais mot de passe affiche une erreur et reste sur l\'accueil', async ({ page }) => {
+  test("un mauvais mot de passe affiche une erreur et reste sur l'accueil", async ({ page }) => {
     await page.getByPlaceholder('Mot de passe').fill('mauvais');
     await page.getByRole('button', { name: 'Accéder' }).click();
     await expect(page.getByText('Mot de passe incorrect')).toBeVisible();
@@ -47,8 +47,13 @@ test.describe('V13 — Protection de /unlock', () => {
   });
 
   // Album dédié : le blocage (15 min, en mémoire) ne doit pas gêner les autres tests ni les runs suivants
-  test('après 10 échecs, l\'album est bloqué pour ce client, même avec le bon mot de passe (429)', async ({ request, adminApi }) => {
-    const created = await adminApi.post('/api/albums', { data: { name: `E2E rate limit ${Date.now()}`, is_public: false, password: 'le-bon' } });
+  test("après 10 échecs, l'album est bloqué pour ce client, même avec le bon mot de passe (429)", async ({
+    request,
+    adminApi,
+  }) => {
+    const created = await adminApi.post('/api/albums', {
+      data: { name: `E2E rate limit ${Date.now()}`, is_public: false, password: 'le-bon' },
+    });
     const { id } = await created.json();
     const unlock = (password: string) => request.post(`/api/albums/${id}/unlock`, { data: { password } });
 

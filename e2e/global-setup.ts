@@ -28,8 +28,17 @@ export default async function globalSetup() {
   // Pixels « couchés » + EXIF 6 : doit s'afficher en portrait
   writeFileSync(
     resolve(FIXTURES_DIR, 'iphone-exif6.jpg'),
-    await sharp(await generateJpeg(800, 1200, '↑')).rotate(270).withMetadata({ orientation: 6 }).jpeg().toBuffer(),
+    await sharp(await generateJpeg(800, 1200, '↑'))
+      .rotate(270)
+      .withMetadata({ orientation: 6 })
+      .jpeg()
+      .toBuffer(),
   );
-  writeFileSync(resolve(FIXTURES_DIR, 'couverture.png'), await sharp(await generateJpeg(600, 800, 'Cover')).png().toBuffer());
-  writeFileSync(resolve(FIXTURES_DIR, 'notes.txt'), 'ceci n\'est pas une image');
+  writeFileSync(
+    resolve(FIXTURES_DIR, 'couverture.png'),
+    await sharp(await generateJpeg(600, 800, 'Cover'))
+      .png()
+      .toBuffer(),
+  );
+  writeFileSync(resolve(FIXTURES_DIR, 'notes.txt'), "ceci n'est pas une image");
 }

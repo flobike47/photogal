@@ -31,10 +31,7 @@ function ThemedApp() {
   }, [setConfig]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <ConfigProvider
-      locale={frFR}
-      theme={{ token: { colorPrimary: config.primary_color || '#1677ff' } }}
-    >
+    <ConfigProvider locale={frFR} theme={{ token: { colorPrimary: config.primary_color || '#1677ff' } }}>
       <RouterProvider router={router} />
     </ConfigProvider>
   );

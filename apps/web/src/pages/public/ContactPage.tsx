@@ -71,30 +71,69 @@ export function ContactPage() {
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 0 }} />
         )}
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', margin: '0 0 20px', fontFamily: 'Inter, sans-serif' }}>
+          <p
+            style={{
+              color: 'rgba(255,255,255,0.25)',
+              fontSize: 10,
+              letterSpacing: '0.35em',
+              textTransform: 'uppercase',
+              margin: '0 0 20px',
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
             Nous écrire
           </p>
           <h1
             className="pg-heading"
-            style={{ color: '#fff', fontSize: isMobile ? 'clamp(28px, 8vw, 48px)' : 'clamp(36px, 4vw, 60px)', fontWeight: 300, margin: '0 0 40px', letterSpacing: '-0.01em', lineHeight: 1.1 }}
+            style={{
+              color: '#fff',
+              fontSize: isMobile ? 'clamp(28px, 8vw, 48px)' : 'clamp(36px, 4vw, 60px)',
+              fontWeight: 300,
+              margin: '0 0 40px',
+              letterSpacing: '-0.01em',
+              lineHeight: 1.1,
+            }}
             dangerouslySetInnerHTML={{ __html: htmlToInline(config.contact_page_title) || 'Parlons de votre projet' }}
           />
           {config.site_description && (
             <div
               dangerouslySetInnerHTML={{ __html: config.site_description }}
-              style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, fontWeight: 300, lineHeight: 1.75, margin: '0 0 56px', maxWidth: 320 }}
+              style={{
+                color: 'rgba(255,255,255,0.45)',
+                fontSize: 15,
+                fontWeight: 300,
+                lineHeight: 1.75,
+                margin: '0 0 56px',
+                maxWidth: 320,
+              }}
               className="pg-rich-text"
             />
           )}
 
           {config.contact_email && (
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 8px', fontFamily: 'Inter, sans-serif' }}>
+              <p
+                style={{
+                  color: 'rgba(255,255,255,0.2)',
+                  fontSize: 9,
+                  letterSpacing: '0.3em',
+                  textTransform: 'uppercase',
+                  margin: '0 0 8px',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
                 Email
               </p>
               <a
                 href={`mailto:${config.contact_email}`}
-                style={{ color: 'rgba(255,255,255,0.7)', fontSize: 15, textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 2, fontWeight: 300 }}
+                style={{
+                  color: 'rgba(255,255,255,0.7)',
+                  fontSize: 15,
+                  textDecoration: 'none',
+                  borderBottom: '1px solid rgba(255,255,255,0.2)',
+                  paddingBottom: 2,
+                  fontWeight: 300,
+                }}
               >
                 {config.contact_email}
               </a>
@@ -103,9 +142,19 @@ export function ContactPage() {
         </div>
 
         {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 64, position: 'relative', zIndex: 1 }}>
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 64, position: 'relative', zIndex: 1 }}
+          >
             <div style={{ width: 40, height: 1, background: 'rgba(255,255,255,0.15)' }} />
-            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>
+            <span
+              style={{
+                color: 'rgba(255,255,255,0.15)',
+                fontSize: 10,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            >
               {config.site_name}
             </span>
           </div>
@@ -136,8 +185,14 @@ export function ContactPage() {
                 onClick={() => setStatus('idle')}
                 className="pg-btn-ghost"
                 style={{ color: '#111', borderColor: 'rgba(0,0,0,0.3)', background: 'transparent' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#111'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#111'; }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = '#111';
+                  (e.currentTarget as HTMLElement).style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  (e.currentTarget as HTMLElement).style.color = '#111';
+                }}
               >
                 Envoyer un autre message
               </button>
@@ -148,7 +203,17 @@ export function ContactPage() {
 
               {/* Name */}
               <div style={{ marginBottom: 40 }}>
-                <label style={{ display: 'block', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#999', marginBottom: 6, fontFamily: 'Inter, sans-serif' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 9,
+                    letterSpacing: '0.3em',
+                    textTransform: 'uppercase',
+                    color: '#999',
+                    marginBottom: 6,
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                >
                   Nom *
                 </label>
                 <input
@@ -164,7 +229,17 @@ export function ContactPage() {
 
               {/* Email */}
               <div style={{ marginBottom: 40 }}>
-                <label style={{ display: 'block', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#999', marginBottom: 6, fontFamily: 'Inter, sans-serif' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 9,
+                    letterSpacing: '0.3em',
+                    textTransform: 'uppercase',
+                    color: '#999',
+                    marginBottom: 6,
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                >
                   Email *
                 </label>
                 <input
@@ -180,7 +255,17 @@ export function ContactPage() {
 
               {/* Message */}
               <div style={{ marginBottom: 56 }}>
-                <label style={{ display: 'block', fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#999', marginBottom: 6, fontFamily: 'Inter, sans-serif' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 9,
+                    letterSpacing: '0.3em',
+                    textTransform: 'uppercase',
+                    color: '#999',
+                    marginBottom: 6,
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                >
                   Message *
                 </label>
                 <textarea
@@ -211,13 +296,13 @@ export function ContactPage() {
                   opacity: status === 'loading' ? 0.5 : 1,
                   cursor: status === 'loading' ? 'not-allowed' : 'pointer',
                 }}
-                onMouseEnter={e => {
+                onMouseEnter={(e) => {
                   if (status !== 'loading') {
                     (e.currentTarget as HTMLElement).style.background = '#111';
                     (e.currentTarget as HTMLElement).style.color = '#fff';
                   }
                 }}
-                onMouseLeave={e => {
+                onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.background = 'transparent';
                   (e.currentTarget as HTMLElement).style.color = '#111';
                 }}

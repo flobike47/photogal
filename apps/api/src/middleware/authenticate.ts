@@ -5,12 +5,11 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   try {
     await request.jwtVerify();
     if (request.user.role !== 'admin') {
-      await reply.status(403).send({ error: 'Accès réservé à l\'administrateur' });
+      await reply.status(403).send({ error: "Accès réservé à l'administrateur" });
       return;
     }
-    const row = db
-      .prepare('SELECT session_version FROM admin_users WHERE id = ?')
-      .get(request.user.id) as { session_version: number } | undefined;
+    const row = db.prepare('SELECT session_version FROM admin_users WHERE id = ?').get(request.user.id) as
+      { session_version: number } | undefined;
     if (!row || (request.user.v ?? 0) !== row.session_version) {
       await reply.status(401).send({ error: 'Session expirée, veuillez vous reconnecter' });
     }

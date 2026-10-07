@@ -7,12 +7,30 @@ import { upload, download, getContentType } from '../storage.js';
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 const ALLOWED_CONFIG_KEYS = new Set([
-  'site_name', 'site_description', 'primary_color', 'contact_email',
-  'hero_title', 'hero_subtitle', 'footer_text', 'logo_url', 'hero_image_url',
-  'about_title', 'about_text', 'about_image_url', 'social_instagram',
-  'social_facebook', 'social_pinterest', 'social_website', 'heading_font', 'site_theme',
-  'cta_button_text', 'portfolio_title', 'portfolio_cta_text',
-  'contact_page_title', 'contact_bg_color', 'contact_bg_url',
+  'site_name',
+  'site_description',
+  'primary_color',
+  'contact_email',
+  'hero_title',
+  'hero_subtitle',
+  'footer_text',
+  'logo_url',
+  'hero_image_url',
+  'about_title',
+  'about_text',
+  'about_image_url',
+  'social_instagram',
+  'social_facebook',
+  'social_pinterest',
+  'social_website',
+  'heading_font',
+  'site_theme',
+  'cta_button_text',
+  'portfolio_title',
+  'portfolio_cta_text',
+  'contact_page_title',
+  'contact_bg_color',
+  'contact_bg_url',
 ]);
 
 export const siteConfigRoutes: FastifyPluginAsync = async (app) => {
@@ -33,10 +51,7 @@ export const siteConfigRoutes: FastifyPluginAsync = async (app) => {
     const key = `logos/${type}`;
     try {
       const [stream, contentType] = await Promise.all([download(key), getContentType(key)]);
-      return reply
-        .header('Content-Type', contentType)
-        .header('Cache-Control', 'public, max-age=3600')
-        .send(stream);
+      return reply.header('Content-Type', contentType).header('Cache-Control', 'public, max-age=3600').send(stream);
     } catch {
       return reply.status(404).send({ error: 'Image introuvable' });
     }
@@ -71,7 +86,14 @@ export const siteConfigRoutes: FastifyPluginAsync = async (app) => {
     await upload(`logos/${type}`, buffer, part.mimetype);
 
     const url = `/api/config/asset/${type}`;
-    const configKey = type === 'logo' ? 'logo_url' : type === 'hero' ? 'hero_image_url' : type === 'about' ? 'about_image_url' : 'contact_bg_url';
+    const configKey =
+      type === 'logo'
+        ? 'logo_url'
+        : type === 'hero'
+          ? 'hero_image_url'
+          : type === 'about'
+            ? 'about_image_url'
+            : 'contact_bg_url';
     db.prepare('INSERT OR REPLACE INTO site_config (key, value) VALUES (?, ?)').run(configKey, url);
 
     return { url, key: configKey };

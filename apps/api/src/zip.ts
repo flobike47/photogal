@@ -8,12 +8,18 @@ import { photoKey } from './images.js';
 import type { Photo } from './types.js';
 
 function uniqueName(seen: Set<string>, original: string): string {
-  if (!seen.has(original)) { seen.add(original); return original; }
+  if (!seen.has(original)) {
+    seen.add(original);
+    return original;
+  }
   const ext = extname(original);
   const base = original.slice(0, -ext.length || undefined);
   let i = 2;
   let candidate = `${base}_${i}${ext}`;
-  while (seen.has(candidate)) { i++; candidate = `${base}_${i}${ext}`; }
+  while (seen.has(candidate)) {
+    i++;
+    candidate = `${base}_${i}${ext}`;
+  }
   seen.add(candidate);
   return candidate;
 }
@@ -21,7 +27,12 @@ function uniqueName(seen: Set<string>, original: string): string {
 // Envoie les photos dans un ZIP diffusé au fil de l'eau. Chaque original n'est ouvert sur MinIO
 // qu'une fois le précédent écrit : un ZIP n'occupe qu'une connexion, au lieu d'en ouvrir une par
 // photo d'avance (ce qui saturait le pool et faisait échouer toutes les autres requêtes).
-export async function sendZip(reply: FastifyReply, filename: string, photos: Photo[], log: FastifyBaseLogger): Promise<void> {
+export async function sendZip(
+  reply: FastifyReply,
+  filename: string,
+  photos: Photo[],
+  log: FastifyBaseLogger,
+): Promise<void> {
   reply.hijack();
   reply.raw.writeHead(200, {
     'Content-Type': 'application/zip',
@@ -43,7 +54,9 @@ export async function sendZip(reply: FastifyReply, filename: string, photos: Pho
     abort();
     reply.raw.destroy();
   });
-  reply.raw.on('close', () => { if (!reply.raw.writableFinished) abort(); });
+  reply.raw.on('close', () => {
+    if (!reply.raw.writableFinished) abort();
+  });
   archive.pipe(reply.raw);
 
   const seen = new Set<string>();
@@ -55,7 +68,10 @@ export async function sendZip(reply: FastifyReply, filename: string, photos: Pho
       log.warn({ err, photoId: photo.id }, 'photo missing from zip');
       continue;
     }
-    if (stop.signal.aborted) { current.destroy(); return; }
+    if (stop.signal.aborted) {
+      current.destroy();
+      return;
+    }
     const written = once(archive, 'entry', { signal: stop.signal });
     archive.append(current, { name: uniqueName(seen, basename(photo.original_name)) });
     try {

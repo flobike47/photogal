@@ -9,9 +9,8 @@ export async function authenticateUser(request: FastifyRequest, reply: FastifyRe
     if (!request.user.email) throw new Error('No email in token');
 
     if (request.user.role === 'admin' && request.user.id) {
-      const row = db
-        .prepare('SELECT session_version FROM admin_users WHERE id = ?')
-        .get(request.user.id) as { session_version: number } | undefined;
+      const row = db.prepare('SELECT session_version FROM admin_users WHERE id = ?').get(request.user.id) as
+        { session_version: number } | undefined;
       if (!row || (request.user.v ?? 0) !== row.session_version) {
         await reply.status(401).send({ error: 'Session expirée, veuillez vous reconnecter' });
         return;

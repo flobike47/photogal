@@ -51,11 +51,13 @@ for (const photo of photos) {
   }
 
   // Upload thumb if exists
-  if (existsSync(thumbSrcPath) && !await exists(thumbKey)) {
+  if (existsSync(thumbSrcPath) && !(await exists(thumbKey))) {
     try {
       const buffer = readFileSync(thumbSrcPath);
       await upload(thumbKey, buffer, 'image/jpeg');
-    } catch { /* non-fatal */ }
+    } catch {
+      /* non-fatal */
+    }
   }
 
   process.stdout.write(`\r  Uploaded: ${uploaded} | Skipped: ${skipped} | Failed: ${failed}`);

@@ -95,29 +95,71 @@ function ImageUploadField({
       msg.success(`${label} mise à jour`);
     } catch {
       options.onError?.(new Error('Upload failed'));
-      msg.error('Erreur lors de l\'upload');
+      msg.error("Erreur lors de l'upload");
     }
   };
 
   return (
     <div>
       {ctxHolder}
-      <Text type="secondary" style={{ fontSize: 12 }}>{label}</Text>
-      {hint && <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 8 }}>{hint}</Text>}
+      <Text type="secondary" style={{ fontSize: 12 }}>
+        {label}
+      </Text>
+      {hint && (
+        <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 8 }}>
+          {hint}
+        </Text>
+      )}
       <Space align="center" style={{ marginTop: 8 }}>
         {currentUrl ? (
           type === 'logo' ? (
-            <img src={currentUrl} alt="preview" style={{ height: 56, maxWidth: 160, objectFit: 'contain', border: '1px solid #f0f0f0', borderRadius: 6, padding: 6, background: '#fafafa' }} />
+            <img
+              src={currentUrl}
+              alt="preview"
+              style={{
+                height: 56,
+                maxWidth: 160,
+                objectFit: 'contain',
+                border: '1px solid #f0f0f0',
+                borderRadius: 6,
+                padding: 6,
+                background: '#fafafa',
+              }}
+            />
           ) : type === 'about' ? (
             <Avatar src={currentUrl} size={72} style={{ border: '2px solid #f0f0f0' }} />
           ) : (
-            <div style={{ position: 'relative', width: 160, height: 90, borderRadius: 6, overflow: 'hidden', border: '1px solid #f0f0f0' }}>
+            <div
+              style={{
+                position: 'relative',
+                width: 160,
+                height: 90,
+                borderRadius: 6,
+                overflow: 'hidden',
+                border: '1px solid #f0f0f0',
+              }}
+            >
               <img src={currentUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           )
         ) : (
-          <div style={{ width: type === 'hero' || type === 'contact' ? 160 : 72, height: type === 'hero' || type === 'contact' ? 90 : 72, background: '#f5f5f5', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #d9d9d9' }}>
-            {type === 'about' ? <UserOutlined style={{ color: '#bbb', fontSize: 24 }} /> : <PictureOutlined style={{ color: '#bbb', fontSize: 24 }} />}
+          <div
+            style={{
+              width: type === 'hero' || type === 'contact' ? 160 : 72,
+              height: type === 'hero' || type === 'contact' ? 90 : 72,
+              background: '#f5f5f5',
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px dashed #d9d9d9',
+            }}
+          >
+            {type === 'about' ? (
+              <UserOutlined style={{ color: '#bbb', fontSize: 24 }} />
+            ) : (
+              <PictureOutlined style={{ color: '#bbb', fontSize: 24 }} />
+            )}
           </div>
         )}
         <div>
@@ -126,7 +168,11 @@ function ImageUploadField({
               {currentUrl ? 'Changer' : 'Uploader'}
             </Button>
           </Upload>
-          {aspectHint && <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>{aspectHint}</Text>}
+          {aspectHint && (
+            <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+              {aspectHint}
+            </Text>
+          )}
         </div>
       </Space>
     </div>
@@ -144,7 +190,8 @@ export function SettingsPage() {
 
   const { data: storageStats } = useQuery({
     queryKey: ['storage-stats'],
-    queryFn: () => apiClient.get<{ used_bytes: number; limit_gb: number | null }>('/config/storage').then(r => r.data),
+    queryFn: () =>
+      apiClient.get<{ used_bytes: number; limit_gb: number | null }>('/config/storage').then((r) => r.data),
     refetchInterval: 30_000,
   });
 
@@ -179,7 +226,12 @@ export function SettingsPage() {
     setPortfolioCtatext(config.portfolio_cta_text || '');
     setAboutTitle(config.about_title || '');
     setContactPageTitle(config.contact_page_title || '');
-    socialForm.setFieldsValue({ social_instagram: config.social_instagram, social_facebook: config.social_facebook, social_pinterest: config.social_pinterest, social_website: config.social_website });
+    socialForm.setFieldsValue({
+      social_instagram: config.social_instagram,
+      social_facebook: config.social_facebook,
+      social_pinterest: config.social_pinterest,
+      social_website: config.social_website,
+    });
     setPrimaryColor(config.primary_color || '#1677ff');
     setHeadingFont(config.heading_font || 'cormorant');
     setSiteTheme(config.site_theme || 'dark');
@@ -199,7 +251,10 @@ export function SettingsPage() {
       setConfig(res.data);
       if (values.site_name) document.title = values.site_name;
       if (values.heading_font) {
-        document.documentElement.style.setProperty('--pg-heading-font', fontStacks[values.heading_font] ?? fontStacks.cormorant);
+        document.documentElement.style.setProperty(
+          '--pg-heading-font',
+          fontStacks[values.heading_font] ?? fontStacks.cormorant,
+        );
       }
       msg.success('Sauvegardé');
     } catch {
@@ -211,7 +266,13 @@ export function SettingsPage() {
 
   const saveAppearance = async () => {
     const values = appearanceForm.getFieldsValue();
-    await save('appearance')({ ...values, primary_color: primaryColor, heading_font: headingFont, site_theme: siteTheme, logo_url: logoUrl });
+    await save('appearance')({
+      ...values,
+      primary_color: primaryColor,
+      heading_font: headingFont,
+      site_theme: siteTheme,
+      logo_url: logoUrl,
+    });
   };
 
   const saveContent = async () => {
@@ -228,10 +289,16 @@ export function SettingsPage() {
   };
 
   const savePassword = async (values: { currentPassword: string; newPassword: string; confirmPassword: string }) => {
-    if (values.newPassword !== values.confirmPassword) { msg.error('Les mots de passe ne correspondent pas'); return; }
+    if (values.newPassword !== values.confirmPassword) {
+      msg.error('Les mots de passe ne correspondent pas');
+      return;
+    }
     setSaving((s) => ({ ...s, password: true }));
     try {
-      await apiClient.put('/auth/password', { currentPassword: values.currentPassword, newPassword: values.newPassword });
+      await apiClient.put('/auth/password', {
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      });
       msg.success('Mot de passe modifié');
       passwordForm.resetFields();
     } catch (err) {
@@ -254,7 +321,10 @@ export function SettingsPage() {
                 label="Logo"
                 type="logo"
                 currentUrl={logoUrl}
-                onSuccess={(url) => { setLogoUrl(url); setConfig({ ...config, logo_url: url }); }}
+                onSuccess={(url) => {
+                  setLogoUrl(url);
+                  setConfig({ ...config, logo_url: url });
+                }}
                 hint="Affiché dans le header et la page de connexion"
                 aspectHint="PNG ou SVG avec fond transparent recommandé"
               />
@@ -309,13 +379,33 @@ export function SettingsPage() {
             >
               <Radio.Button value="dark">
                 <Space>
-                  <span style={{ display: 'inline-block', width: 16, height: 16, background: '#111', borderRadius: 3, verticalAlign: 'middle', border: '1px solid #d9d9d9' }} />
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: 16,
+                      height: 16,
+                      background: '#111',
+                      borderRadius: 3,
+                      verticalAlign: 'middle',
+                      border: '1px solid #d9d9d9',
+                    }}
+                  />
                   Sombre
                 </Space>
               </Radio.Button>
               <Radio.Button value="light">
                 <Space>
-                  <span style={{ display: 'inline-block', width: 16, height: 16, background: '#fff', borderRadius: 3, verticalAlign: 'middle', border: '1px solid #d9d9d9' }} />
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: 16,
+                      height: 16,
+                      background: '#fff',
+                      borderRadius: 3,
+                      verticalAlign: 'middle',
+                      border: '1px solid #d9d9d9',
+                    }}
+                  />
                   Clair
                 </Space>
               </Radio.Button>
@@ -327,11 +417,25 @@ export function SettingsPage() {
             <ColorPicker
               value={primaryColor}
               onChange={(c: Color) => setPrimaryColor(c.toHexString())}
-              showText format="hex"
-              presets={[{
-                label: 'Suggestions',
-                colors: ['#1677ff', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#111111', '#64748b'],
-              }]}
+              showText
+              format="hex"
+              presets={[
+                {
+                  label: 'Suggestions',
+                  colors: [
+                    '#1677ff',
+                    '#0ea5e9',
+                    '#6366f1',
+                    '#8b5cf6',
+                    '#ec4899',
+                    '#f59e0b',
+                    '#10b981',
+                    '#ef4444',
+                    '#111111',
+                    '#64748b',
+                  ],
+                },
+              ]}
             />
           </Form.Item>
 
@@ -345,10 +449,19 @@ export function SettingsPage() {
               {FONT_OPTIONS.map((opt) => (
                 <Radio key={opt.value} value={opt.value}>
                   <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 12 }}>
-                    <span style={{ fontSize: 22, lineHeight: 1.2, ...opt.style, color: headingFont === opt.value ? '#1677ff' : '#111' }}>
+                    <span
+                      style={{
+                        fontSize: 22,
+                        lineHeight: 1.2,
+                        ...opt.style,
+                        color: headingFont === opt.value ? '#1677ff' : '#111',
+                      }}
+                    >
                       {opt.sample}
                     </span>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{opt.label}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {opt.label}
+                    </Text>
                   </div>
                 </Radio>
               ))}
@@ -360,7 +473,11 @@ export function SettingsPage() {
             label="Photo de fond du hero (page d'accueil)"
             type="hero"
             currentUrl={heroImageUrl}
-            onSuccess={(url) => { setHeroImageUrl(url); setConfig({ ...config, hero_image_url: url }); save('hero')({ hero_image_url: url }); }}
+            onSuccess={(url) => {
+              setHeroImageUrl(url);
+              setConfig({ ...config, hero_image_url: url });
+              save('hero')({ hero_image_url: url });
+            }}
             hint="Si vide, un dégradé sombre est utilisé"
             aspectHint="Résolution recommandée : 1920×1080 minimum"
           />
@@ -415,7 +532,11 @@ export function SettingsPage() {
                 label="Photo du photographe"
                 type="about"
                 currentUrl={aboutImageUrl}
-                onSuccess={(url) => { setAboutImageUrl(url); setConfig({ ...config, about_image_url: url }); save('about')({ about_image_url: url }); }}
+                onSuccess={(url) => {
+                  setAboutImageUrl(url);
+                  setConfig({ ...config, about_image_url: url });
+                  save('about')({ about_image_url: url });
+                }}
                 aspectHint="Format portrait recommandé"
               />
             </Col>
@@ -456,12 +577,26 @@ export function SettingsPage() {
             />
             <Row gutter={24}>
               <Col xs={24} sm={12}>
-                <Form.Item name="social_instagram" label={<Space><InstagramOutlined /> Instagram</Space>}>
+                <Form.Item
+                  name="social_instagram"
+                  label={
+                    <Space>
+                      <InstagramOutlined /> Instagram
+                    </Space>
+                  }
+                >
                   <Input placeholder="https://instagram.com/votreprofil" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12}>
-                <Form.Item name="social_facebook" label={<Space><GlobalOutlined /> Facebook</Space>}>
+                <Form.Item
+                  name="social_facebook"
+                  label={
+                    <Space>
+                      <GlobalOutlined /> Facebook
+                    </Space>
+                  }
+                >
                   <Input placeholder="https://facebook.com/votrepage" />
                 </Form.Item>
               </Col>
@@ -471,7 +606,14 @@ export function SettingsPage() {
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12}>
-                <Form.Item name="social_website" label={<Space><GlobalOutlined /> Site web externe</Space>}>
+                <Form.Item
+                  name="social_website"
+                  label={
+                    <Space>
+                      <GlobalOutlined /> Site web externe
+                    </Space>
+                  }
+                >
                   <Input placeholder="https://votresite.com" />
                 </Form.Item>
               </Col>
@@ -491,16 +633,21 @@ export function SettingsPage() {
           <Row gutter={24} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12}>
               <div style={{ marginBottom: 8 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>Couleur de fond (si pas d'image)</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Couleur de fond (si pas d'image)
+                </Text>
               </div>
               <ColorPicker
                 value={contactBgColor || '#0a0a0a'}
                 onChange={(c: Color) => setContactBgColor(c.toHexString())}
-                showText format="hex"
-                presets={[{
-                  label: 'Suggestions',
-                  colors: ['#0a0a0a', '#111827', '#1e293b', '#312e81', '#4a1942', '#064e3b', '#7c2d12'],
-                }]}
+                showText
+                format="hex"
+                presets={[
+                  {
+                    label: 'Suggestions',
+                    colors: ['#0a0a0a', '#111827', '#1e293b', '#312e81', '#4a1942', '#064e3b', '#7c2d12'],
+                  },
+                ]}
               />
             </Col>
             <Col xs={24} sm={12}>
@@ -530,13 +677,19 @@ export function SettingsPage() {
     },
     {
       key: 'storage',
-      label: <Space><DatabaseOutlined />Stockage</Space>,
+      label: (
+        <Space>
+          <DatabaseOutlined />
+          Stockage
+        </Space>
+      ),
       children: (() => {
         const usedBytes = storageStats?.used_bytes ?? 0;
-        const usedGb = usedBytes / (1024 ** 3);
+        const usedGb = usedBytes / 1024 ** 3;
         const limitGb = storageStats?.limit_gb ?? null;
         const percent = limitGb ? Math.min(Math.round((usedGb / limitGb) * 100), 100) : null;
-        const status = percent != null ? (percent >= 90 ? 'exception' : percent >= 70 ? 'normal' : 'success') : 'normal';
+        const status =
+          percent != null ? (percent >= 90 ? 'exception' : percent >= 70 ? 'normal' : 'success') : 'normal';
 
         return (
           <div style={{ maxWidth: 520 }}>
@@ -545,7 +698,7 @@ export function SettingsPage() {
               <Col span={12}>
                 <Statistic
                   title="Espace utilisé"
-                  value={usedGb < 1 ? (usedBytes / (1024 ** 2)).toFixed(0) : usedGb.toFixed(2)}
+                  value={usedGb < 1 ? (usedBytes / 1024 ** 2).toFixed(0) : usedGb.toFixed(2)}
                   suffix={usedGb < 1 ? 'Mo' : 'Go'}
                   valueStyle={{ color: percent != null && percent >= 90 ? '#ff4d4f' : undefined }}
                 />
@@ -581,7 +734,7 @@ export function SettingsPage() {
                 type="warning"
                 showIcon
                 message="Espace bientôt saturé"
-                description={`Il vous reste ${((limitGb! - usedGb)).toFixed(2)} Go disponibles.`}
+                description={`Il vous reste ${(limitGb! - usedGb).toFixed(2)} Go disponibles.`}
                 style={{ marginBottom: 24 }}
               />
             )}
@@ -590,7 +743,11 @@ export function SettingsPage() {
             <Alert
               type="info"
               showIcon
-              message={limitGb ? `Limite fixée à ${limitGb} Go via variable d'environnement STORAGE_LIMIT_GB.` : "Aucune limite définie. Ajoutez STORAGE_LIMIT_GB dans votre .env pour activer."}
+              message={
+                limitGb
+                  ? `Limite fixée à ${limitGb} Go via variable d'environnement STORAGE_LIMIT_GB.`
+                  : 'Aucune limite définie. Ajoutez STORAGE_LIMIT_GB dans votre .env pour activer.'
+              }
               description="Les uploads sont bloqués si la limite est atteinte."
             />
           </div>
@@ -602,12 +759,21 @@ export function SettingsPage() {
       label: 'Sécurité',
       children: (
         <div style={{ maxWidth: 420 }}>
-          <Alert type="info" showIcon message="Changez votre mot de passe administrateur." style={{ marginBottom: 24 }} />
+          <Alert
+            type="info"
+            showIcon
+            message="Changez votre mot de passe administrateur."
+            style={{ marginBottom: 24 }}
+          />
           <Form form={passwordForm} layout="vertical" onFinish={savePassword}>
             <Form.Item name="currentPassword" label="Mot de passe actuel" rules={[{ required: true }]}>
               <Input.Password prefix={<LockOutlined />} />
             </Form.Item>
-            <Form.Item name="newPassword" label="Nouveau mot de passe" rules={[{ required: true }, { min: 8, message: 'Au moins 8 caractères' }]}>
+            <Form.Item
+              name="newPassword"
+              label="Nouveau mot de passe"
+              rules={[{ required: true }, { min: 8, message: 'Au moins 8 caractères' }]}
+            >
               <Input.Password prefix={<LockOutlined />} />
             </Form.Item>
             <Form.Item name="confirmPassword" label="Confirmer" rules={[{ required: true }]}>
@@ -624,7 +790,11 @@ export function SettingsPage() {
 
   return (
     <Card
-      title={<Title level={4} style={{ margin: 0 }}>Paramètres du site</Title>}
+      title={
+        <Title level={4} style={{ margin: 0 }}>
+          Paramètres du site
+        </Title>
+      }
       bodyStyle={{ padding: '8px 24px 24px' }}
     >
       {ctxHolder}

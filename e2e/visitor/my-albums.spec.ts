@@ -6,7 +6,7 @@ const myAlbums = (page: import('@playwright/test').Page) =>
 
 // U1 Mes albums · U2 Copier le lien · U3 Déconnexion · U4 Pas d'admin
 test.describe('U1 — Mes albums', () => {
-  test('un email autorisé voit l\'album partagé avec lui et peut l\'ouvrir', async ({ page, loginAsVisitor }) => {
+  test("un email autorisé voit l'album partagé avec lui et peut l'ouvrir", async ({ page, loginAsVisitor }) => {
     await loginAsVisitor(ALLOWED_VISITOR);
     await page.goto('/');
     const section = myAlbums(page);
@@ -28,8 +28,8 @@ test.describe('U1 — Mes albums', () => {
   });
 });
 
-test.describe('U2 — Copier le lien d\'un album partagé', () => {
-  test('le bouton est proposé à un email autorisé et copie l\'URL', async ({ page, loginAsVisitor, readClipboard }) => {
+test.describe("U2 — Copier le lien d'un album partagé", () => {
+  test("le bouton est proposé à un email autorisé et copie l'URL", async ({ page, loginAsVisitor, readClipboard }) => {
     await loginAsVisitor(ALLOWED_VISITOR);
     await page.goto('/share/demo-prive-emails');
     await page.getByRole('button', { name: 'Copier le lien' }).click();
@@ -37,7 +37,7 @@ test.describe('U2 — Copier le lien d\'un album partagé', () => {
     expect(await readClipboard()).toBe(`${new URL(page.url()).origin}/share/demo-prive-emails`);
   });
 
-  test('le bouton n\'est pas proposé aux autres', async ({ page, loginAsVisitor }) => {
+  test("le bouton n'est pas proposé aux autres", async ({ page, loginAsVisitor }) => {
     await loginAsVisitor(OTHER_VISITOR);
     await page.goto('/share/demo-prive-emails');
     await expect(page.locator('.pg-photo-card')).toHaveCount(6);
@@ -46,7 +46,10 @@ test.describe('U2 — Copier le lien d\'un album partagé', () => {
 });
 
 test.describe('U3 — Déconnexion visiteur', () => {
-  test('« × » déconnecte : la section disparaît et la session est révoquée côté navigateur', async ({ page, loginAsVisitor }) => {
+  test('« × » déconnecte : la section disparaît et la session est révoquée côté navigateur', async ({
+    page,
+    loginAsVisitor,
+  }) => {
     await loginAsVisitor(ALLOWED_VISITOR);
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Mes albums' })).toBeVisible();
@@ -59,9 +62,13 @@ test.describe('U3 — Déconnexion visiteur', () => {
   test('une session visiteur expirée reste sur le site public', async ({ page, context, baseURL }) => {
     await context.addCookies([{ name: SESSION_COOKIE, value: signVisitorToken(ALLOWED_VISITOR, -60), url: baseURL! }]);
     await context.addInitScript(() => {
-      sessionStorage.setItem('photogal-auth', JSON.stringify({
-        state: { email: 'client@example.com', isAuthenticated: true, isAdmin: false }, version: 0,
-      }));
+      sessionStorage.setItem(
+        'photogal-auth',
+        JSON.stringify({
+          state: { email: 'client@example.com', isAuthenticated: true, isAdmin: false },
+          version: 0,
+        }),
+      );
     });
     await page.goto('/');
     await expect(page.locator('#albums')).toBeVisible();
@@ -69,8 +76,8 @@ test.describe('U3 — Déconnexion visiteur', () => {
   });
 });
 
-test.describe('U4 — Un visiteur n\'accède pas à l\'admin', () => {
-  test('pas de lien Admin, /admin renvoie au login, et l\'API refuse (403)', async ({ page, loginAsVisitor }) => {
+test.describe("U4 — Un visiteur n'accède pas à l'admin", () => {
+  test("pas de lien Admin, /admin renvoie au login, et l'API refuse (403)", async ({ page, loginAsVisitor }) => {
     await loginAsVisitor(ALLOWED_VISITOR);
     await page.goto('/');
     await expect(page.locator('header nav').getByRole('link', { name: 'Admin' })).toHaveCount(0);

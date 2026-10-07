@@ -25,7 +25,12 @@ function escapeXml(s: string): string {
 }
 
 async function generateImage(opts: {
-  width: number; height: number; hue: number; label: string; sublabel?: string; seed?: number;
+  width: number;
+  height: number;
+  hue: number;
+  label: string;
+  sublabel?: string;
+  seed?: number;
 }): Promise<Buffer> {
   const { width, height, hue, label, sublabel, seed = 0 } = opts;
   const min = Math.min(width, height);
@@ -50,9 +55,13 @@ async function generateImage(opts: {
       <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
             font-family="Helvetica, Arial, sans-serif" font-size="${min * 0.22}" font-weight="200"
             fill="#fff" fill-opacity="0.92">${escapeXml(label)}</text>
-      ${sublabel ? `<text x="50%" y="${height / 2 + min * 0.18}" text-anchor="middle"
+      ${
+        sublabel
+          ? `<text x="50%" y="${height / 2 + min * 0.18}" text-anchor="middle"
             font-family="Helvetica, Arial, sans-serif" font-size="${min * 0.04}"
-            fill="#fff" fill-opacity="0.6">${escapeXml(sublabel)}</text>` : ''}
+            fill="#fff" fill-opacity="0.6">${escapeXml(sublabel)}</text>`
+          : ''
+      }
     </svg>`;
   return sharp(Buffer.from(svg)).jpeg({ quality: 82 }).toBuffer();
 }
@@ -88,12 +97,14 @@ const ORIENTATIONS = [
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let next = 0;
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
-      const i = next++;
-      results[i] = await fn(items[i], i);
-    }
-  }));
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        results[i] = await fn(items[i], i);
+      }
+    }),
+  );
   return results;
 }
 
@@ -133,15 +144,33 @@ type Photo = import('../types.js').Photo;
 // ── 2. Admin ────────────────────────────────────────────────────────────────────
 // Id fixe : la session admin dans le navigateur reste valide d'un seed à l'autre
 db.prepare('INSERT INTO admin_users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)').run(
-  'admin-dev', config.adminEmail, await bcrypt.hash(config.adminPassword, 10), new Date().toISOString(),
+  'admin-dev',
+  config.adminEmail,
+  await bcrypt.hash(config.adminPassword, 10),
+  new Date().toISOString(),
 );
 
 // ── 3. Config du site + images ──────────────────────────────────────────────────
 const assets: [type: string, configKey: string, buffer: Promise<Buffer>, mime: string][] = [
   ['logo', 'logo_url', generateLogo('PhotoGal'), 'image/png'],
-  ['hero', 'hero_image_url', generateImage({ width: 2400, height: 1350, hue: 210, label: 'Hero', seed: 1 }), 'image/jpeg'],
-  ['about', 'about_image_url', generateImage({ width: 1200, height: 1500, hue: 25, label: 'À propos', seed: 2 }), 'image/jpeg'],
-  ['contact', 'contact_bg_url', generateImage({ width: 2400, height: 1350, hue: 280, label: 'Contact', seed: 3 }), 'image/jpeg'],
+  [
+    'hero',
+    'hero_image_url',
+    generateImage({ width: 2400, height: 1350, hue: 210, label: 'Hero', seed: 1 }),
+    'image/jpeg',
+  ],
+  [
+    'about',
+    'about_image_url',
+    generateImage({ width: 1200, height: 1500, hue: 25, label: 'À propos', seed: 2 }),
+    'image/jpeg',
+  ],
+  [
+    'contact',
+    'contact_bg_url',
+    generateImage({ width: 2400, height: 1350, hue: 280, label: 'Contact', seed: 3 }),
+    'image/jpeg',
+  ],
 ];
 const setConfig = db.prepare('INSERT OR REPLACE INTO site_config (key, value) VALUES (?, ?)');
 for (const [key, value] of Object.entries(defaultConfig)) setConfig.run(key, value);
@@ -178,15 +207,87 @@ interface AlbumSeed {
 }
 
 const albums: AlbumSeed[] = [
-  { id: 'album-portfolio-portraits', name: 'Portraits', description: 'Sélection portfolio — portraits', shareToken: 'demo-portraits', hue: 20, photoCount: 8, isPortfolio: true },
-  { id: 'album-portfolio-paysages', name: 'Paysages', description: 'Sélection portfolio — paysages', shareToken: 'demo-paysages', hue: 140, photoCount: 8, isPortfolio: true },
-  { id: 'album-mariage', name: 'Mariage Julie & Thomas', description: 'Album long pour tester le tri, le ZIP et le défilement', shareToken: 'demo-mariage', hue: 340, photoCount: 40 },
-  { id: 'album-prive-mdp', name: 'Séance privée (mot de passe)', description: 'Mot de passe : test1234', shareToken: 'demo-prive-mdp', hue: 260, photoCount: 6, isPublic: false, password: 'test1234' },
-  { id: 'album-prive-emails', name: 'Famille Martin (accès email)', description: 'Visible dans « Mes albums » pour les emails autorisés', shareToken: 'demo-prive-emails', hue: 190, photoCount: 6, isPublic: false, allowedEmails: ['client@example.com', ...(process.env.SEED_USER_EMAIL ? [process.env.SEED_USER_EMAIL] : [])] },
-  { id: 'album-non-telechargeable', name: 'Épreuves (non téléchargeable)', description: 'Téléchargement désactivé', shareToken: 'demo-non-telechargeable', hue: 50, photoCount: 5, isDownloadable: false },
-  { id: 'album-couverture', name: 'Événement (couverture perso)', description: 'Couverture uploadée indépendamment des photos', shareToken: 'demo-couverture', hue: 100, photoCount: 4, customCover: true },
-  { id: 'album-orientation', name: 'Orientation EXIF', description: 'Toutes les flèches doivent pointer vers le haut', shareToken: 'demo-orientation', hue: 160, photoCount: 4, exifOrientations: [1, 3, 6, 8] },
-  { id: 'album-vide', name: 'Album vide', description: 'Pour tester les états vides', shareToken: 'demo-vide', hue: 0, photoCount: 0 },
+  {
+    id: 'album-portfolio-portraits',
+    name: 'Portraits',
+    description: 'Sélection portfolio — portraits',
+    shareToken: 'demo-portraits',
+    hue: 20,
+    photoCount: 8,
+    isPortfolio: true,
+  },
+  {
+    id: 'album-portfolio-paysages',
+    name: 'Paysages',
+    description: 'Sélection portfolio — paysages',
+    shareToken: 'demo-paysages',
+    hue: 140,
+    photoCount: 8,
+    isPortfolio: true,
+  },
+  {
+    id: 'album-mariage',
+    name: 'Mariage Julie & Thomas',
+    description: 'Album long pour tester le tri, le ZIP et le défilement',
+    shareToken: 'demo-mariage',
+    hue: 340,
+    photoCount: 40,
+  },
+  {
+    id: 'album-prive-mdp',
+    name: 'Séance privée (mot de passe)',
+    description: 'Mot de passe : test1234',
+    shareToken: 'demo-prive-mdp',
+    hue: 260,
+    photoCount: 6,
+    isPublic: false,
+    password: 'test1234',
+  },
+  {
+    id: 'album-prive-emails',
+    name: 'Famille Martin (accès email)',
+    description: 'Visible dans « Mes albums » pour les emails autorisés',
+    shareToken: 'demo-prive-emails',
+    hue: 190,
+    photoCount: 6,
+    isPublic: false,
+    allowedEmails: ['client@example.com', ...(process.env.SEED_USER_EMAIL ? [process.env.SEED_USER_EMAIL] : [])],
+  },
+  {
+    id: 'album-non-telechargeable',
+    name: 'Épreuves (non téléchargeable)',
+    description: 'Téléchargement désactivé',
+    shareToken: 'demo-non-telechargeable',
+    hue: 50,
+    photoCount: 5,
+    isDownloadable: false,
+  },
+  {
+    id: 'album-couverture',
+    name: 'Événement (couverture perso)',
+    description: 'Couverture uploadée indépendamment des photos',
+    shareToken: 'demo-couverture',
+    hue: 100,
+    photoCount: 4,
+    customCover: true,
+  },
+  {
+    id: 'album-orientation',
+    name: 'Orientation EXIF',
+    description: 'Toutes les flèches doivent pointer vers le haut',
+    shareToken: 'demo-orientation',
+    hue: 160,
+    photoCount: 4,
+    exifOrientations: [1, 3, 6, 8],
+  },
+  {
+    id: 'album-vide',
+    name: 'Album vide',
+    description: 'Pour tester les états vides',
+    shareToken: 'demo-vide',
+    hue: 0,
+    photoCount: 0,
+  },
 ];
 
 const insertAlbum = db.prepare(
@@ -206,55 +307,90 @@ for (const [albumIndex, a] of albums.entries()) {
   // Albums espacés d'un jour pour un ordre d'affichage stable
   const createdAt = new Date(baseTime + albumIndex * 86_400_000).toISOString();
 
-  const photos = await mapLimit(Array.from({ length: a.photoCount }, (_, i) => i), 4, async (i) => {
-    const { width, height } = ORIENTATIONS[i % ORIENTATIONS.length];
-    const number = String(i + 1).padStart(2, '0');
-    const orientation = a.exifOrientations?.[i];
-    const buffer = orientation
-      ? await withExifOrientation(await generateImage({
-          width: 1200, height: 1600, hue: (a.hue + i * 40) % 360, seed: albumIndex * 100 + i,
-          label: '↑ HAUT', sublabel: `EXIF orientation ${orientation}`,
-        }), orientation)
-      : await generateImage({
-          width, height, hue: (a.hue + i * 7) % 360, seed: albumIndex * 100 + i,
-          label: number, sublabel: `${a.name.split(' (')[0]} · ${width}×${height}`,
-        });
-    const photo: Photo = {
-      id: nanoid(),
-      album_id: a.id,
-      filename: '',
-      original_name: `IMG_${number}.jpg`,
-      mime_type: 'image/jpeg',
-      size: buffer.length,
-      share_token: nanoid(12),
-      sort_order: i + 1,
-      created_at: new Date(Date.parse(createdAt) + i * 1000).toISOString(),
-    };
-    photo.filename = `${photo.id}.jpg`;
-    await upload(`photos/${a.id}/${photo.filename}`, buffer, photo.mime_type);
-    await generateAndUploadThumb(buffer, thumbKey(photo));
-    return photo;
-  });
+  const photos = await mapLimit(
+    Array.from({ length: a.photoCount }, (_, i) => i),
+    4,
+    async (i) => {
+      const { width, height } = ORIENTATIONS[i % ORIENTATIONS.length];
+      const number = String(i + 1).padStart(2, '0');
+      const orientation = a.exifOrientations?.[i];
+      const buffer = orientation
+        ? await withExifOrientation(
+            await generateImage({
+              width: 1200,
+              height: 1600,
+              hue: (a.hue + i * 40) % 360,
+              seed: albumIndex * 100 + i,
+              label: '↑ HAUT',
+              sublabel: `EXIF orientation ${orientation}`,
+            }),
+            orientation,
+          )
+        : await generateImage({
+            width,
+            height,
+            hue: (a.hue + i * 7) % 360,
+            seed: albumIndex * 100 + i,
+            label: number,
+            sublabel: `${a.name.split(' (')[0]} · ${width}×${height}`,
+          });
+      const photo: Photo = {
+        id: nanoid(),
+        album_id: a.id,
+        filename: '',
+        original_name: `IMG_${number}.jpg`,
+        mime_type: 'image/jpeg',
+        size: buffer.length,
+        share_token: nanoid(12),
+        sort_order: i + 1,
+        created_at: new Date(Date.parse(createdAt) + i * 1000).toISOString(),
+      };
+      photo.filename = `${photo.id}.jpg`;
+      await upload(`photos/${a.id}/${photo.filename}`, buffer, photo.mime_type);
+      await generateAndUploadThumb(buffer, thumbKey(photo));
+      return photo;
+    },
+  );
 
   let coverUrl: string | null = null;
   if (a.customCover) {
-    const cover = await generateImage({ width: 1600, height: 1000, hue: (a.hue + 180) % 360, label: 'Couverture', seed: 999 });
+    const cover = await generateImage({
+      width: 1600,
+      height: 1000,
+      hue: (a.hue + 180) % 360,
+      label: 'Couverture',
+      seed: 999,
+    });
     await upload(`covers/${a.id}`, cover, 'image/jpeg');
     coverUrl = `/api/albums/${a.id}/cover`;
   }
 
   insertAlbum.run(
-    a.id, a.name, a.description, a.shareToken,
+    a.id,
+    a.name,
+    a.description,
+    a.shareToken,
     a.isPublic === false ? 0 : 1,
     a.isDownloadable === false ? 0 : 1,
     a.isPortfolio ? 1 : 0,
     a.password ? await bcrypt.hash(a.password, 10) : null,
     photos[0]?.filename ?? null, // convention du front : cover_photo_id = filename
     coverUrl,
-    createdAt, createdAt,
+    createdAt,
+    createdAt,
   );
   for (const p of photos) {
-    insertPhoto.run(p.id, p.album_id, p.filename, p.original_name, p.mime_type, p.size, p.share_token, p.sort_order, p.created_at);
+    insertPhoto.run(
+      p.id,
+      p.album_id,
+      p.filename,
+      p.original_name,
+      p.mime_type,
+      p.size,
+      p.share_token,
+      p.sort_order,
+      p.created_at,
+    );
   }
   for (const email of a.allowedEmails ?? []) insertAccess.run(a.id, email.trim().toLowerCase());
 
@@ -267,14 +403,23 @@ const messages: [name: string, email: string, message: string, read: boolean][] 
   ['Claire Dubois', 'claire@example.com', 'Bonjour, êtes-vous disponible pour un mariage en juin prochain ?', false],
   ['Marc Lefèvre', 'marc@example.com', 'Je souhaiterais un devis pour une séance photo de famille.', false],
   ['Sophie Bernard', 'sophie@example.com', 'Merci pour les photos, elles sont superbes !', true],
-  ['Entreprise ACME', 'rh@acme.example.com', 'Nous cherchons un photographe pour des portraits corporate (une vingtaine de personnes).\n\nPouvez-vous nous rappeler ?', false],
+  [
+    'Entreprise ACME',
+    'rh@acme.example.com',
+    'Nous cherchons un photographe pour des portraits corporate (une vingtaine de personnes).\n\nPouvez-vous nous rappeler ?',
+    false,
+  ],
   ['Lucas Petit', 'lucas@example.com', 'Est-il possible de récupérer les fichiers RAW ?', true],
 ];
-const insertMessage = db.prepare('INSERT INTO contact_messages (id, name, email, message, read, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+const insertMessage = db.prepare(
+  'INSERT INTO contact_messages (id, name, email, message, read, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+);
 for (const [i, [name, email, message, read]] of messages.entries()) {
   insertMessage.run(nanoid(), name, email, message, read ? 1 : 0, new Date(Date.now() - i * 3_600_000).toISOString());
 }
 
 db.close();
 console.log(`\n[seed] Terminé : ${albums.length} albums, ${photoTotal} photos, ${messages.length} messages.`);
-console.log(`[seed] Admin : ${config.adminEmail} (mot de passe : ADMIN_PASSWORD du .env, ou "dev-changeme" par défaut)`);
+console.log(
+  `[seed] Admin : ${config.adminEmail} (mot de passe : ADMIN_PASSWORD du .env, ou "dev-changeme" par défaut)`,
+);

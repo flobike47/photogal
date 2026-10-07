@@ -19,14 +19,14 @@ test.describe('V3 — Navigation desktop', () => {
     await expect(page).toHaveURL('/');
   });
 
-  test('« Galerie » depuis une autre page revient à l\'accueil sur la section Albums', async ({ page }) => {
+  test("« Galerie » depuis une autre page revient à l'accueil sur la section Albums", async ({ page }) => {
     await page.goto('/contact');
     await page.locator('header nav').getByRole('button', { name: 'Galerie' }).click();
     await expect(page).toHaveURL('/#albums');
     await expect(page.locator('#albums')).toBeInViewport();
   });
 
-  test('le logo ramène à l\'accueil', async ({ page }) => {
+  test("le logo ramène à l'accueil", async ({ page }) => {
     await page.goto('/contact');
     await page.locator('header').getByRole('link').first().click();
     await expect(page).toHaveURL('/');
@@ -39,7 +39,10 @@ test.describe('V4 — Navigation mobile', () => {
   test('le burger ouvre le menu, et un lien navigue puis referme le menu', async ({ page }) => {
     await page.goto('/');
     // Premier lien « Contact » du DOM = celui du menu overlay (les liens masqués sortent de l'arbre ARIA)
-    const overlayContact = page.locator('a[href="/contact"]').filter({ hasText: /^Contact$/ }).first();
+    const overlayContact = page
+      .locator('a[href="/contact"]')
+      .filter({ hasText: /^Contact$/ })
+      .first();
     await expect(overlayContact).toBeHidden();
 
     await page.getByRole('button', { name: 'Menu' }).click();
@@ -50,7 +53,7 @@ test.describe('V4 — Navigation mobile', () => {
     await expect(overlayContact).toBeHidden();
   });
 
-  test('« Galerie » dans le menu fait défiler jusqu\'aux albums', async ({ page }) => {
+  test("« Galerie » dans le menu fait défiler jusqu'aux albums", async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Menu' }).click();
     await page.getByRole('button', { name: 'Galerie' }).click();

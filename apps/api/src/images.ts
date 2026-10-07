@@ -32,8 +32,9 @@ const imageLimit = createLimiter(config.imageConcurrency);
 // Le sharp précompilé ne décode pas le HEVC (brevets) : les HEIC d'iPhone passent
 // par libheif en WASM (heic-decode), qui applique déjà la rotation propre au HEIC.
 export function isHeic(mimeType: string, filename = ''): boolean {
-  return ['image/heic', 'image/heif'].includes(mimeType)
-    || ['.heic', '.heif'].includes(extname(filename).toLowerCase());
+  return (
+    ['image/heic', 'image/heif'].includes(mimeType) || ['.heic', '.heif'].includes(extname(filename).toLowerCase())
+  );
 }
 
 type DecodedHeic = { width: number; height: number; data: Uint8ClampedArray };

@@ -22,17 +22,14 @@ import { nanoid } from 'nanoid';
 const app = Fastify({
   trustProxy: config.trustProxy,
   logger: {
-    transport:
-      config.nodeEnv === 'development'
-        ? { target: 'pino-pretty', options: { colorize: true } }
-        : undefined,
+    transport: config.nodeEnv === 'development' ? { target: 'pino-pretty', options: { colorize: true } } : undefined,
   },
 });
 
 await app.register(fastifyHelmet, {
   contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,  // autorise l'iframe du bouton Google
-  crossOriginOpenerPolicy: false,    // autorise la popup Google à communiquer avec la page
+  crossOriginEmbedderPolicy: false, // autorise l'iframe du bouton Google
+  crossOriginOpenerPolicy: false, // autorise la popup Google à communiquer avec la page
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 });
 await app.register(fastifyCors, { origin: config.corsOrigin, credentials: true });
@@ -70,7 +67,10 @@ const adminExists = db.prepare('SELECT id FROM admin_users WHERE email = ?').get
 if (!adminExists) {
   const hash = await bcrypt.hash(config.adminPassword, 10);
   db.prepare('INSERT INTO admin_users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)').run(
-    nanoid(), config.adminEmail, hash, new Date().toISOString(),
+    nanoid(),
+    config.adminEmail,
+    hash,
+    new Date().toISOString(),
   );
   app.log.info(`Admin user created: ${config.adminEmail}`);
 }
@@ -85,8 +85,12 @@ const shutdown = async (signal: string) => {
   }
   process.exit(0);
 };
-process.on('SIGINT', () => { void shutdown('SIGINT'); });
-process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
+process.on('SIGINT', () => {
+  void shutdown('SIGINT');
+});
+process.on('SIGTERM', () => {
+  void shutdown('SIGTERM');
+});
 
 await app.listen({ port: config.port, host: config.host });
 app.log.info(`🟢 API running on http://${config.host}:${config.port}`);

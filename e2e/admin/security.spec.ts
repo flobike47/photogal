@@ -26,9 +26,11 @@ test.describe('A26 — Changement du mot de passe admin', () => {
     await expect(page.getByText('Mot de passe actuel incorrect')).toBeVisible();
   });
 
-  test('une confirmation différente est refusée sans appel à l\'API', async ({ page }) => {
+  test("une confirmation différente est refusée sans appel à l'API", async ({ page }) => {
     let called = false;
-    page.on('request', (r) => { if (r.url().endsWith('/api/auth/password')) called = true; });
+    page.on('request', (r) => {
+      if (r.url().endsWith('/api/auth/password')) called = true;
+    });
     await fillPasswordForm(page, ADMIN_PASSWORD, NEW_PASSWORD, 'autre-chose');
     await expect(page.getByText('Les mots de passe ne correspondent pas')).toBeVisible();
     expect(called).toBe(false);
@@ -36,13 +38,20 @@ test.describe('A26 — Changement du mot de passe admin', () => {
 
   test('un nouveau mot de passe trop court est signalé dans le formulaire', async ({ page }) => {
     let called = false;
-    page.on('request', (r) => { if (r.url().endsWith('/api/auth/password')) called = true; });
+    page.on('request', (r) => {
+      if (r.url().endsWith('/api/auth/password')) called = true;
+    });
     await fillPasswordForm(page, ADMIN_PASSWORD, 'abc1234');
     await expect(page.getByText('Au moins 8 caractères')).toBeVisible();
     expect(called).toBe(false);
   });
 
-  test('un changement réussi invalide les sessions et seul le nouveau mot de passe fonctionne', async ({ page, adminApi, playwright, baseURL }) => {
+  test('un changement réussi invalide les sessions et seul le nouveau mot de passe fonctionne', async ({
+    page,
+    adminApi,
+    playwright,
+    baseURL,
+  }) => {
     await fillPasswordForm(page, ADMIN_PASSWORD, NEW_PASSWORD);
     await expect(page.getByText('Mot de passe modifié')).toBeVisible();
 

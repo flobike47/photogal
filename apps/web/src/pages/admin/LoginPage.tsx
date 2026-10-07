@@ -33,7 +33,7 @@ export function LoginPage() {
         setAuth(res.data.email, res.data.isAdmin);
         navigate('/admin', { replace: true });
       } catch {
-        setError('Accès refusé. Ce compte Google n\'est pas autorisé.');
+        setError("Accès refusé. Ce compte Google n'est pas autorisé.");
       }
     };
 
@@ -92,7 +92,9 @@ export function LoginPage() {
           <Title level={3} style={{ margin: 0 }}>
             {config.site_name}
           </Title>
-          <Text type="secondary" style={{ fontSize: 13 }}>Espace administration</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            Espace administration
+          </Text>
         </div>
 
         {error && <Alert type="error" message={error} style={{ marginBottom: 16, textAlign: 'left' }} />}

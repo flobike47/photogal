@@ -8,7 +8,8 @@ test.afterAll(reseed);
 
 const pane = (page: Page) => page.locator('.ant-tabs-tabpane-active');
 const editor = (page: Page, index: number) => pane(page).locator('.ProseMirror').nth(index);
-const getConfig = async (api: APIRequestContext) => (await api.get('/api/config')).json() as Promise<Record<string, string>>;
+const getConfig = async (api: APIRequestContext) =>
+  (await api.get('/api/config')).json() as Promise<Record<string, string>>;
 
 async function openTab(page: Page, name: string) {
   await page.goto('/admin/settings');
@@ -42,7 +43,7 @@ async function pickColor(page: Page, hex: string) {
 
 // A19 → A25
 test.describe('A19 — Identité', () => {
-  test('le nom du site, l\'email de contact et le footer sont repris partout', async ({ page, browser }) => {
+  test("le nom du site, l'email de contact et le footer sont repris partout", async ({ page, browser }) => {
     await openTab(page, 'Identité');
     await pane(page).getByLabel('Nom du site').fill('Studio E2E');
     await pane(page).getByLabel('Email de contact').fill('hello@studio-e2e.test');
@@ -52,7 +53,10 @@ test.describe('A19 — Identité', () => {
 
     await page.goto('/');
     await expect(page.locator('header')).toContainText('Studio E2E');
-    await expect(page.locator('footer').getByRole('link', { name: 'hello@studio-e2e.test' })).toHaveAttribute('href', 'mailto:hello@studio-e2e.test');
+    await expect(page.locator('footer').getByRole('link', { name: 'hello@studio-e2e.test' })).toHaveAttribute(
+      'href',
+      'mailto:hello@studio-e2e.test',
+    );
     await expect(page.locator('footer')).toContainText('© Studio E2E');
 
     const anonymous = await browser.newPage();
@@ -61,7 +65,7 @@ test.describe('A19 — Identité', () => {
     await anonymous.close();
   });
 
-  test('A24 — le logo uploadé s\'affiche dans les headers public et admin', async ({ page, request }) => {
+  test("A24 — le logo uploadé s'affiche dans les headers public et admin", async ({ page, request }) => {
     await openTab(page, 'Identité');
     await pane(page).locator('input[type=file]').setInputFiles(fixture('couverture.png'));
     await expect(page.getByText('Logo mise à jour')).toBeVisible();
@@ -70,15 +74,18 @@ test.describe('A19 — Identité', () => {
     const asset = await request.get('/api/config/asset/logo');
     expect(await imageSize(await asset.body())).toMatchObject({ format: 'png', width: 600, height: 800 });
     await page.goto('/');
-    await expect(page.locator('header').getByRole('img', { name: 'logo' })).toHaveAttribute('src', '/api/config/asset/logo');
+    await expect(page.locator('header').getByRole('img', { name: 'logo' })).toHaveAttribute(
+      'src',
+      '/api/config/asset/logo',
+    );
   });
 });
 
 test.describe('A20 — Apparence', () => {
-  test('le thème clair s\'applique aux sections de l\'accueil', async ({ page }) => {
+  test("le thème clair s'applique aux sections de l'accueil", async ({ page }) => {
     await openTab(page, 'Apparence');
     await pane(page).getByText('Clair').click();
-    await save(page, 'Sauvegarder l\'apparence');
+    await save(page, "Sauvegarder l'apparence");
     await page.goto('/');
     await expect(page.locator('#galleries')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   });
@@ -86,8 +93,10 @@ test.describe('A20 — Apparence', () => {
   test('la couleur principale et la police des titres sont enregistrées et appliquées', async ({ page, adminApi }) => {
     await openTab(page, 'Apparence');
     await pickColor(page, '10b981');
-    await pane(page).getByRole('radio', { name: /Playfair Display/ }).check();
-    await save(page, 'Sauvegarder l\'apparence');
+    await pane(page)
+      .getByRole('radio', { name: /Playfair Display/ })
+      .check();
+    await save(page, "Sauvegarder l'apparence");
     expect(await getConfig(adminApi)).toMatchObject({ primary_color: '#10b981', heading_font: 'playfair' });
 
     // La couleur principale colore la case de sélection des galeries
@@ -97,11 +106,13 @@ test.describe('A20 — Apparence', () => {
     await expect(box).toHaveCSS('background-color', 'rgb(16, 185, 129)');
   });
 
-  test('l\'image du hero est remplacée par l\'upload', async ({ page, request }) => {
+  test("l'image du hero est remplacée par l'upload", async ({ page, request }) => {
     await openTab(page, 'Apparence');
     await pane(page).locator('input[type=file]').setInputFiles(fixture('paysage.jpg'));
-    await expect(page.getByText('Photo de fond du hero (page d\'accueil) mise à jour')).toBeVisible();
-    await expect.poll(async () => (await imageSize(await (await request.get('/api/config/asset/hero')).body())).width).toBe(1200);
+    await expect(page.getByText("Photo de fond du hero (page d'accueil) mise à jour")).toBeVisible();
+    await expect
+      .poll(async () => (await imageSize(await (await request.get('/api/config/asset/hero')).body())).width)
+      .toBe(1200);
   });
 });
 
@@ -134,12 +145,15 @@ test.describe('A22 — Réseaux sociaux', () => {
     await pane(page).getByLabel('Facebook').fill('facebook.com/studio-e2e');
     await save(page, 'Sauvegarder');
     await page.goto('/');
-    await expect(page.locator('footer').getByRole('link', { name: 'Facebook' })).toHaveAttribute('href', 'https://facebook.com/studio-e2e');
+    await expect(page.locator('footer').getByRole('link', { name: 'Facebook' })).toHaveAttribute(
+      'href',
+      'https://facebook.com/studio-e2e',
+    );
   });
 });
 
 test.describe('A23 — Fond de la page contact', () => {
-  test('la couleur et la photo de fond s\'appliquent au panneau de la page contact', async ({ page, adminApi }) => {
+  test("la couleur et la photo de fond s'appliquent au panneau de la page contact", async ({ page, adminApi }) => {
     await openTab(page, 'Contact & Réseaux');
     await pickColor(page, '312e81');
     await save(page, 'Sauvegarder le fond Contact');
@@ -156,11 +170,13 @@ test.describe('A23 — Fond de la page contact', () => {
 });
 
 test.describe('A25 — Stockage', () => {
-  test('affiche l\'espace utilisé et la limite configurée', async ({ page }) => {
+  test("affiche l'espace utilisé et la limite configurée", async ({ page }) => {
     await openTab(page, 'Stockage');
     await expect(pane(page).getByText('Espace utilisé')).toBeVisible();
     await expect(pane(page).getByText('Mo', { exact: true })).toBeVisible();
     await expect(pane(page).locator('.ant-statistic').filter({ hasText: 'Limite' })).toContainText('10Go');
-    await expect(pane(page).getByText('Limite fixée à 10 Go via variable d\'environnement STORAGE_LIMIT_GB.')).toBeVisible();
+    await expect(
+      pane(page).getByText("Limite fixée à 10 Go via variable d'environnement STORAGE_LIMIT_GB."),
+    ).toBeVisible();
   });
 });

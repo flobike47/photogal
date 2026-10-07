@@ -28,7 +28,12 @@ test.describe('V1 — Accueil', () => {
     await expect(portfolio.filter({ hasText: 'Portraits' })).toHaveAttribute('href', '/share/demo-portraits');
     // Couverture = miniature de la première photo
     await expect(portfolio.first().locator('img')).toHaveJSProperty('complete', true);
-    expect(await portfolio.first().locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    expect(
+      await portfolio
+        .first()
+        .locator('img')
+        .evaluate((img: HTMLImageElement) => img.naturalWidth),
+    ).toBeGreaterThan(0);
   });
 
   test('la section Albums distingue albums publics, protégés par mot de passe et sur invitation', async ({ page }) => {
@@ -53,7 +58,7 @@ test.describe('V1 — Accueil', () => {
     await expect(albums.filter({ hasText: 'Portraits' })).toHaveCount(0);
   });
 
-  test('V14 — la carte d\'un album à couverture personnalisée utilise cette image', async ({ page }) => {
+  test("V14 — la carte d'un album à couverture personnalisée utilise cette image", async ({ page }) => {
     const card = page.locator('#albums .pg-album-card').filter({ hasText: 'Événement' });
     await expect(card.locator('img')).toHaveAttribute('src', '/api/albums/album-couverture/cover');
   });
@@ -72,10 +77,16 @@ test.describe('V2 — Footer', () => {
     await expect(footer).toContainText('Partagez vos plus belles photos');
     await expect(footer.getByRole('link', { name: 'Accueil' })).toHaveAttribute('href', '/');
     await expect(footer.getByRole('link', { name: 'Contact', exact: true })).toHaveAttribute('href', '/contact');
-    await expect(footer.getByRole('link', { name: 'Instagram' })).toHaveAttribute('href', 'https://instagram.com/photogal');
+    await expect(footer.getByRole('link', { name: 'Instagram' })).toHaveAttribute(
+      'href',
+      'https://instagram.com/photogal',
+    );
     await expect(footer.getByRole('link', { name: 'Site web' })).toHaveAttribute('href', 'https://example.com');
     await expect(footer.getByRole('link', { name: 'Facebook' })).toHaveCount(0);
-    await expect(footer.getByRole('link', { name: 'contact@photogal.test' })).toHaveAttribute('href', 'mailto:contact@photogal.test');
+    await expect(footer.getByRole('link', { name: 'contact@photogal.test' })).toHaveAttribute(
+      'href',
+      'mailto:contact@photogal.test',
+    );
     await expect(footer).toContainText('© 2024 PhotoGal');
   });
 });

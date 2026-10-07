@@ -42,7 +42,10 @@ test.describe('S1 — Routes admin sans session', () => {
 test.describe('S2 — Routes admin avec une session visiteur', () => {
   for (const [method, path, data] of ADMIN_ROUTES) {
     test(`${method.toUpperCase()} ${path} → 403`, async ({ request }) => {
-      const res = await request[method](path, { data, headers: { cookie: `${SESSION_COOKIE}=${signVisitorToken(ALLOWED_VISITOR)}` } });
+      const res = await request[method](path, {
+        data,
+        headers: { cookie: `${SESSION_COOKIE}=${signVisitorToken(ALLOWED_VISITOR)}` },
+      });
       expect(res.status()).toBe(403);
     });
   }
@@ -62,7 +65,7 @@ test.describe('S3 — Configuration', () => {
     expect(config).not.toHaveProperty('cle_inconnue');
   });
 
-  test('un type d\'asset inconnu est refusé (400)', async ({ request }) => {
+  test("un type d'asset inconnu est refusé (400)", async ({ request }) => {
     expect((await request.get('/api/config/asset/inconnu')).status()).toBe(400);
   });
 });
@@ -72,7 +75,7 @@ test.describe('S4 — Santé et SPA', () => {
     expect(await (await request.get('/api/health')).json()).toMatchObject({ status: 'ok' });
   });
 
-  test('un lien profond du front renvoie l\'application', async ({ request }) => {
+  test("un lien profond du front renvoie l'application", async ({ request }) => {
     const res = await request.get('/admin/albums');
     expect(res.status()).toBe(200);
     expect(await res.text()).toContain('<div id="root">');
@@ -84,9 +87,11 @@ test.describe('S4 — Santé et SPA', () => {
 });
 
 test.describe('S5 — Cycle de vie des ressources', () => {
-  test('une photo supprimée n\'est plus servie (original, miniature, téléchargement)', async ({ adminApi, request }) => {
+  test("une photo supprimée n'est plus servie (original, miniature, téléchargement)", async ({ adminApi, request }) => {
     const upload = await adminApi.post('/api/photos/upload/album-vide', {
-      multipart: { file: { name: 'paysage.jpg', mimeType: 'image/jpeg', buffer: readFileSync(fixture('paysage.jpg')) } },
+      multipart: {
+        file: { name: 'paysage.jpg', mimeType: 'image/jpeg', buffer: readFileSync(fixture('paysage.jpg')) },
+      },
     });
     const [photo] = (await upload.json()).photos as { id: string; share_token: string }[];
     expect((await request.get(`/api/photos/${photo.id}/original`)).status()).toBe(200);
@@ -97,13 +102,13 @@ test.describe('S5 — Cycle de vie des ressources', () => {
     expect((await request.get(`/api/photos/download/${photo.share_token}`)).status()).toBe(404);
   });
 
-  test('régénérer le token invalide l\'ancien lien', async ({ adminApi, request }) => {
+  test("régénérer le token invalide l'ancien lien", async ({ adminApi, request }) => {
     const { share_token } = await (await adminApi.post('/api/albums/album-vide/regenerate-token')).json();
     expect((await request.get('/api/albums/share/demo-vide')).status()).toBe(404);
     expect((await request.get(`/api/albums/share/${share_token}`)).status()).toBe(200);
   });
 
-  test('le réordonnancement ignore les photos d\'un autre album', async ({ adminApi }) => {
+  test("le réordonnancement ignore les photos d'un autre album", async ({ adminApi }) => {
     const other = (await (await adminApi.get('/api/albums/album-mariage/photos')).json()).photos[0];
     await adminApi.put('/api/photos/reorder', { data: { albumId: 'album-portfolio-portraits', photoIds: [other.id] } });
     const after = (await (await adminApi.get('/api/albums/album-mariage/photos')).json()).photos[0];
@@ -112,12 +117,14 @@ test.describe('S5 — Cycle de vie des ressources', () => {
 });
 
 test.describe('S6 — Données sensibles et droits de téléchargement', () => {
-  test('aucune réponse d\'album n\'expose le hash du mot de passe', async ({ request, adminApi }) => {
+  test("aucune réponse d'album n'expose le hash du mot de passe", async ({ request, adminApi }) => {
     const responses = [
       await request.get('/api/albums/public'),
       await request.get('/api/albums/listing'),
       await request.get('/api/albums/share/demo-prive-mdp'),
-      await request.get('/api/albums/my', { headers: { cookie: `${SESSION_COOKIE}=${signVisitorToken(ALLOWED_VISITOR)}` } }),
+      await request.get('/api/albums/my', {
+        headers: { cookie: `${SESSION_COOKIE}=${signVisitorToken(ALLOWED_VISITOR)}` },
+      }),
       await adminApi.get('/api/albums'),
       await adminApi.get('/api/albums/album-prive-mdp'),
       await adminApi.put('/api/albums/album-prive-mdp', { data: { description: 'x' } }),
@@ -130,38 +137,44 @@ test.describe('S6 — Données sensibles et droits de téléchargement', () => {
     expect(admin.has_password).toBe(1);
   });
 
-  test('la galerie publique ne révèle pas les emails autorisés, seulement l\'accès du visiteur', async ({ request }) => {
+  test("la galerie publique ne révèle pas les emails autorisés, seulement l'accès du visiteur", async ({ request }) => {
     const anonymous = (await (await request.get('/api/albums/share/demo-prive-emails')).json()).album;
     expect(anonymous).not.toHaveProperty('allowed_emails');
     expect(anonymous.viewer_has_access).toBe(false);
 
-    const asAllowed = (await (await request.get('/api/albums/share/demo-prive-emails', {
-      headers: { cookie: `${SESSION_COOKIE}=${signVisitorToken(ALLOWED_VISITOR)}` },
-    })).json()).album;
+    const asAllowed = (
+      await (
+        await request.get('/api/albums/share/demo-prive-emails', {
+          headers: { cookie: `${SESSION_COOKIE}=${signVisitorToken(ALLOWED_VISITOR)}` },
+        })
+      ).json()
+    ).album;
     expect(asAllowed.viewer_has_access).toBe(true);
   });
 
-  test('une photo d\'un album non téléchargeable ne peut pas être téléchargée', async ({ request }) => {
+  test("une photo d'un album non téléchargeable ne peut pas être téléchargée", async ({ request }) => {
     const { photos } = await (await request.get('/api/albums/share/demo-non-telechargeable')).json();
     const res = await request.get(`/api/photos/download/${photos[0].share_token}`);
     expect(res.status()).toBe(403);
   });
 
-  test('le ZIP de sélection refuse les photos d\'un album non téléchargeable', async ({ request }) => {
+  test("le ZIP de sélection refuse les photos d'un album non téléchargeable", async ({ request }) => {
     const { photos } = await (await request.get('/api/albums/share/demo-non-telechargeable')).json();
     const res = await request.post('/api/photos/download-zip', { data: { shareTokens: [photos[0].share_token] } });
     expect(res.status()).toBe(403);
   });
 
-  test('un ZIP mêlant les deux types d\'albums ne contient que les photos téléchargeables', async ({ request }) => {
+  test("un ZIP mêlant les deux types d'albums ne contient que les photos téléchargeables", async ({ request }) => {
     const locked = (await (await request.get('/api/albums/share/demo-non-telechargeable')).json()).photos[0];
     const open = (await (await request.get('/api/albums/share/demo-mariage')).json()).photos[0];
-    const res = await request.post('/api/photos/download-zip', { data: { shareTokens: [locked.share_token, open.share_token] } });
+    const res = await request.post('/api/photos/download-zip', {
+      data: { shareTokens: [locked.share_token, open.share_token] },
+    });
     expect(res.status()).toBe(200);
     expect(zipEntries(await res.body())).toEqual([open.original_name]);
   });
 
-  test('l\'aperçu (original) reste disponible pour un album non téléchargeable', async ({ request }) => {
+  test("l'aperçu (original) reste disponible pour un album non téléchargeable", async ({ request }) => {
     const { photos } = await (await request.get('/api/albums/share/demo-non-telechargeable')).json();
     expect((await request.get(`/api/photos/${photos[0].id}/original`)).status()).toBe(200);
   });

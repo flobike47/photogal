@@ -43,16 +43,23 @@ function PhotoCard({
     <div className="pg-photo-card" style={{ position: 'relative' }}>
       {downloadable && (
         <div
-          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
           style={{
             position: 'absolute',
-            top: 10, left: 10,
+            top: 10,
+            left: 10,
             zIndex: 10,
-            width: 22, height: 22,
+            width: 22,
+            height: 22,
             borderRadius: 4,
             border: `2px solid ${isSelected ? accentColor : 'rgba(255,255,255,0.55)'}`,
             background: isSelected ? accentColor : 'rgba(0,0,0,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             cursor: 'pointer',
             transition: 'all 0.18s ease',
             backdropFilter: 'blur(4px)',
@@ -74,11 +81,24 @@ function PhotoCard({
           mask: (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
               <EyeOutlined style={{ fontSize: 22, color: '#fff' }} />
-              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>
+              <span
+                style={{
+                  color: 'rgba(255,255,255,0.8)',
+                  fontSize: 11,
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  fontFamily: 'Inter, sans-serif',
+                }}
+              >
                 Aperçu
               </span>
               {downloadable && (
-                <a href={`/api/photos/download/${photo.share_token}`} download onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
+                <a
+                  href={`/api/photos/download/${photo.share_token}`}
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ textDecoration: 'none' }}
+                >
                   <Button type="primary" size="small" icon={<DownloadOutlined />} onClick={(e) => e.stopPropagation()}>
                     Télécharger
                   </Button>
@@ -106,8 +126,7 @@ export function SharePage() {
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['shared-album', token],
-    queryFn: () =>
-      apiClient.get<{ album: Album; photos: Photo[] }>(`/albums/share/${token}`).then((r) => r.data),
+    queryFn: () => apiClient.get<{ album: Album; photos: Photo[] }>(`/albums/share/${token}`).then((r) => r.data),
     enabled: !!token,
   });
 
@@ -156,7 +175,9 @@ export function SharePage() {
     // Tout l'album : le ZIP de l'album n'a pas de limite de nombre de photos
     if (allSelected) return startDownload('GET', `/api/albums/share/${token}/download`);
     if (selected.size > MAX_SELECTION) {
-      msgApi.warning(`Vous pouvez télécharger ${MAX_SELECTION} photos au maximum par sélection. Utilisez « Tout télécharger » pour l'album complet.`);
+      msgApi.warning(
+        `Vous pouvez télécharger ${MAX_SELECTION} photos au maximum par sélection. Utilisez « Tout télécharger » pour l'album complet.`,
+      );
       return;
     }
     startDownload('POST', '/api/photos/download-zip', selected);
@@ -164,7 +185,15 @@ export function SharePage() {
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#0a0a0a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -172,9 +201,25 @@ export function SharePage() {
 
   if (isError || !data) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#0a0a0a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <div style={{ textAlign: 'center' }}>
-          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, letterSpacing: '0.3em', textTransform: 'uppercase', margin: '0 0 16px' }}>
+          <p
+            style={{
+              color: 'rgba(255,255,255,0.25)',
+              fontSize: 11,
+              letterSpacing: '0.3em',
+              textTransform: 'uppercase',
+              margin: '0 0 16px',
+            }}
+          >
             404
           </p>
           <h1 className="pg-heading" style={{ color: '#fff', fontSize: 48, fontWeight: 300, margin: '0 0 24px' }}>
@@ -183,7 +228,9 @@ export function SharePage() {
           <p style={{ color: 'rgba(255,255,255,0.4)', margin: '0 0 40px', fontWeight: 300 }}>
             Ce lien n'existe pas ou a été désactivé.
           </p>
-          <Link to="/" className="pg-btn-ghost">Retour à l'accueil</Link>
+          <Link to="/" className="pg-btn-ghost">
+            Retour à l'accueil
+          </Link>
         </div>
       </div>
     );
@@ -204,35 +251,85 @@ export function SharePage() {
       {contextHolder}
       <iframe name={DOWNLOAD_FRAME} title="Téléchargement" style={{ display: 'none' }} />
       {/* ── Album header ── */}
-      <div style={{ padding: isMobile ? '100px 20px 40px' : '120px 64px 64px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div
+        style={{
+          padding: isMobile ? '100px 20px 40px' : '120px 64px 64px',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
         <Link
           to="/"
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            color: 'rgba(255,255,255,0.35)', textDecoration: 'none',
-            fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
-            marginBottom: 48, fontFamily: 'Inter, sans-serif', fontWeight: 500,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            color: 'rgba(255,255,255,0.35)',
+            textDecoration: 'none',
+            fontSize: 11,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            marginBottom: 48,
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 500,
             transition: 'color 0.2s',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.7)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)'; }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.7)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)';
+          }}
         >
           ← Retour aux galeries
         </Link>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'flex-end', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap', gap: 24 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: isMobile ? 'flex-start' : 'flex-end',
+            flexDirection: isMobile ? 'column' : 'row',
+            flexWrap: 'wrap',
+            gap: 24,
+          }}
+        >
           <div>
-            <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 10, letterSpacing: '0.32em', textTransform: 'uppercase', margin: '0 0 14px', fontFamily: 'Inter, sans-serif' }}>
-              {dayjs(album.created_at).format('DD MMMM YYYY')} &nbsp;·&nbsp; {photos.length} photo{photos.length !== 1 ? 's' : ''}
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.28)',
+                fontSize: 10,
+                letterSpacing: '0.32em',
+                textTransform: 'uppercase',
+                margin: '0 0 14px',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            >
+              {dayjs(album.created_at).format('DD MMMM YYYY')} &nbsp;·&nbsp; {photos.length} photo
+              {photos.length !== 1 ? 's' : ''}
             </p>
             <h1
               className="pg-heading"
-              style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 68px)', fontWeight: 300, margin: 0, letterSpacing: '-0.01em' }}
+              style={{
+                color: '#fff',
+                fontSize: 'clamp(32px, 5vw, 68px)',
+                fontWeight: 300,
+                margin: 0,
+                letterSpacing: '-0.01em',
+              }}
             >
               {album.name}
             </h1>
             {album.description && (
-              <p style={{ color: 'rgba(255,255,255,0.42)', fontSize: 17, margin: '18px 0 0', fontWeight: 300, lineHeight: 1.65, maxWidth: 600 }}>
+              <p
+                style={{
+                  color: 'rgba(255,255,255,0.42)',
+                  fontSize: 17,
+                  margin: '18px 0 0',
+                  fontWeight: 300,
+                  lineHeight: 1.65,
+                  maxWidth: 600,
+                }}
+              >
                 {album.description}
               </p>
             )}
@@ -259,8 +356,14 @@ export function SharePage() {
                       transition: 'all 0.2s',
                       borderRadius: 2,
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.5)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.color = '#fff';
+                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)';
+                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)';
+                    }}
                   >
                     {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
                   </button>
@@ -272,7 +375,11 @@ export function SharePage() {
                   <Button
                     icon={<LinkOutlined />}
                     onClick={copyShareLink}
-                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff' }}
+                    style={{
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#fff',
+                    }}
                   >
                     Copier le lien
                   </Button>
@@ -280,7 +387,14 @@ export function SharePage() {
               )}
               {!!album.is_downloadable && (
                 <a href={`/api/albums/share/${token}/download`} download style={{ textDecoration: 'none' }}>
-                  <Button icon={<DownloadOutlined />} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff' }}>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    style={{
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#fff',
+                    }}
+                  >
                     Tout télécharger
                   </Button>
                 </a>
@@ -326,10 +440,18 @@ export function SharePage() {
       {/* ── Hint ── */}
       {photos.length > 0 && selected.size === 0 && (
         <div style={{ textAlign: 'center', padding: '48px 24px 80px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <p style={{ color: 'rgba(255,255,255,0.18)', fontSize: 12, letterSpacing: '0.12em', margin: 0, fontFamily: 'Inter, sans-serif' }}>
+          <p
+            style={{
+              color: 'rgba(255,255,255,0.18)',
+              fontSize: 12,
+              letterSpacing: '0.12em',
+              margin: 0,
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
             {album.is_downloadable
               ? 'Cliquez sur le carré pour sélectionner · Survolez pour apercevoir ou télécharger'
-              : 'Survolez une photo pour l\'apercevoir'}
+              : "Survolez une photo pour l'apercevoir"}
           </p>
         </div>
       )}
@@ -356,22 +478,28 @@ export function SharePage() {
           }}
         >
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>
-            <strong style={{ color: '#fff' }}>{selected.size}</strong> photo{selected.size > 1 ? 's' : ''} sélectionnée{selected.size > 1 ? 's' : ''}
+            <strong style={{ color: '#fff' }}>{selected.size}</strong> photo{selected.size > 1 ? 's' : ''} sélectionnée
+            {selected.size > 1 ? 's' : ''}
           </span>
           <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.1)' }} />
           <button
             onClick={clearSelection}
-            style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '2px 6px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(255,255,255,0.4)',
+              cursor: 'pointer',
+              padding: '2px 6px',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
           >
             <CloseOutlined style={{ fontSize: 11 }} /> Annuler
           </button>
           {!!album.is_downloadable && (
-            <Button
-              type="primary"
-              icon={<DownloadOutlined />}
-              onClick={downloadSelected}
-              style={{ borderRadius: 6 }}
-            >
+            <Button type="primary" icon={<DownloadOutlined />} onClick={downloadSelected} style={{ borderRadius: 6 }}>
               Télécharger la sélection
             </Button>
           )}
