@@ -12,14 +12,15 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undef
 
 export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
-  const { setAuth, isAuthenticated } = useAuthStore();
+  const { setAuth, isAdmin } = useAuthStore();
   const { config } = useSiteConfigStore();
   const navigate = useNavigate();
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
+  // Seul un admin est renvoyé vers /admin : un visiteur Google y serait refusé et reviendrait ici en boucle
   useEffect(() => {
-    if (isAuthenticated) navigate('/admin', { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (isAdmin) navigate('/admin', { replace: true });
+  }, [isAdmin, navigate]);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;
